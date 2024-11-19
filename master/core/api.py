@@ -7,6 +7,7 @@ from functools import wraps
 import threading
 
 _logger = get_logger(__name__)
+_lock_classes: bool = False
 classes: Dict[str, List[Type[Any]]] = defaultdict(list)
 
 
@@ -23,6 +24,8 @@ class Meta(AbstractMeta, type):
 
     @classmethod
     def attach_element(cls, klass: Type[Any]):
+        if _lock_classes:
+            return klass
         meta_path = getattr(klass, '__meta_path__', None)
         if meta_path:
             classes[meta_path].append(klass)
@@ -79,4 +82,6 @@ def debounce(wait):
 
 
 def compile_classes():
-    pass
+    global _lock_classes
+    _lock_classes = True
+    print(classes)
