@@ -74,6 +74,7 @@ from . import tree
 def read_modules(shutdown: bool = False) -> Iterable[Configuration]:
     configurations = reader.read_configurations()
     if not configurations and shutdown:
+        _logger.error('No configurations found. Shutting down.')
         sys.exit(-1)
     order_tree = tree.Tree(configurations[arguments.configuration['master_base_addon']])
     ordered_configurations = configurations.values()

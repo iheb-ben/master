@@ -62,9 +62,6 @@ class Tree:
         if configuration.name not in self._modules:
             self._modules[configuration.name] = Node(configuration)
 
-    def _check_loops(self):
-        pass
-
     def build_links(self, configurations: Iterable[Configuration]):
         """
         Establishes parent-child relationships based on module dependencies.
@@ -81,8 +78,12 @@ class Tree:
                         continue
                 else:
                     self._modules[dependency].add_child(self._modules[configuration.name])
-        # TODO: check loops
-        self._check_loops()
+        for node in self._modules.values():
+            if node.name == self._default:
+                continue
+            for dependency in node.children:
+                if node in self._collect_all_nodes(dependency):
+                    raise ValueError(f'Circular dependency detected in addon "{node.name}": "{dependency.name}" is in the recursion stack.')
 
     @classmethod
     def _collect_all_nodes(cls, node: Node) -> List[Node]:
@@ -125,10 +126,9 @@ class Tree:
                 - A list of missing dependencies.
                 - An ordered list of configurations.
         """
-        ordered_configurations: List[Configuration] = []
-        root_node = self._modules[self._default]
         ordered_names: List[str] = []
-        for node in sorted(self._collect_all_nodes(root_node), key=self._sort_all_nodes):
+        ordered_configurations: List[Configuration] = []
+        for node in sorted(self._collect_all_nodes(self._modules[self._default]), key=self._sort_all_nodes):
             ordered_configurations.append(configurations[node.name])
             ordered_names.append(node.name)
         for configuration in ordered_configurations:

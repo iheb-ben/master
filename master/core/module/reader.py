@@ -100,6 +100,4 @@ def read_configurations() -> Dict[str, Configuration]:
                 _logger.warning(f'Ignored invalid module: {module_name}')
         if is_empty:
             _logger.warning(f'No valid modules found in: {addons_path}')
-    if not configurations:
-        _logger.error('No configurations found. Shutting down.')
     return configurations
