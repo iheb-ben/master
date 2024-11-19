@@ -10,6 +10,7 @@ from master.config.parser import arguments
 _logger = get_logger(__name__)
 
 
+# noinspection GrazieInspection
 class Configuration:
     """
     Represents a module configuration.
@@ -20,19 +21,60 @@ class Configuration:
     """
     __slots__ = ('path', 'depends', 'sequence')
 
-    def __init__(self, path: str, depends: Union[List[str], str], sequence: Optional[int] = None):
+    def __init__(
+        self,
+        path: str,
+        depends: Optional[Union[List[str], str]] = None,
+        sequence: Optional[int] = None
+    ):
+        """
+        Initializes a Configuration instance.
+        Args:
+            path (str): The path to the module.
+            depends (Optional[Union[List[str], str]]): Module dependencies, can be a list or a single string.
+            sequence (Optional[int]): The load sequence for the module.
+        """
         self.path = path
-        self.depends = [depends] if isinstance(depends, str) else depends
-        self.sequence = sequence or 16
         base_name = arguments.configuration['master_base_addon']
+        # Normalize dependencies to a list of non-empty strings
+        if depends is None:
+            depends = []
+        elif isinstance(depends, str):
+            depends = [depends]
+        if not isinstance(depends, Iterable) or isinstance(depends, bytes):
+            raise ValueError(f'Addon {self.name} issue: Dependency format is incorrect in path "{path}"')
+        self.depends = [name.strip() for name in depends if name]
+        # Determine sequence with fallback logic
+        if sequence is None or sequence <= 0:
+            sequence = 16
+            _logger.warning(f'Addon {self.name} issue: Incorrect or missing addon sequence, set to default 16.')
+        self.sequence = sequence
+        # Ensure master_base_addon is included as the first dependency
         if base_name and self.name != base_name and base_name not in self.depends:
             self.depends.insert(0, base_name)
 
     @property
     def name(self) -> str:
-        """Extract the name of the module from its path."""
+        """
+        Extracts the module name from its path.
+        Returns:
+            str: The name of the module.
+        """
         assert self.path, 'Module "path" value is required'
-        return Path(self.path).name
+        return Path(self.path).name.strip()
+
+    def to_dict(self) -> dict:
+        """
+        Converts the configuration to a dictionary format.
+        Returns:
+            dict: A dictionary representation of the configuration.
+        """
+        return {
+            'name': self.name,
+            'path': self.path,
+            'sequence': self.sequence,
+            'depends': self.depends,
+        }
 
 
 def iterate_addons_paths() -> Generator[Path, None, None]:
@@ -118,7 +160,7 @@ def read_configurations(shutdown: bool = False) -> Iterable[Configuration]:
             if module_path.is_file():
                 continue
             configuration_data = read_module_configuration(module_path)
-            if configuration_data:
+            if configuration_data is not None:
                 configuration_data['path'] = str(module_path)
                 configurations[module_name] = Configuration(**configuration_data)
                 is_empty = False

@@ -4,4 +4,4 @@ from . import reader
 
 def attach_modules(shutdown: bool = False):
     for configuration in reader.read_configurations(shutdown):
-        pass
+        print(configuration.to_dict())
