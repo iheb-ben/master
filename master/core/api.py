@@ -76,3 +76,7 @@ def debounce(wait):
             wrapper._timer.start()
         return wrapper
     return decorator
+
+
+def compile_classes():
+    pass

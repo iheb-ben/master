@@ -1,5 +1,6 @@
 import traceback
 from typing import Optional
+from . import addons
 from . import exceptions
 from . import tools
 from . import config
@@ -18,7 +19,8 @@ def main():
     _logger.info(f"Master Password: {config.parser.arguments.configuration['master_password']}")
     config.parser.arguments.save_configuration()
     core.db.main()
-    core.module.read_modules(True)
+    core.module.main()
+    core.api.compile_classes()
     if config.parser.arguments.configuration['pipeline']:
         core.pipeline.main()
     else:

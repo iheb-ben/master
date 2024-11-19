@@ -1,6 +1,5 @@
-from collections import defaultdict
-from typing import Dict, List, Iterable, Optional, Set, Tuple
-from master.config.parser import arguments
+from collections import OrderedDict
+from typing import Dict, List, Iterable, Tuple
 from master.core.module import Configuration
 
 
@@ -36,6 +35,9 @@ class Node:
     def __repr__(self) -> str:
         """Returns a string representation of the Node instance."""
         return f'Node({self.name})'
+
+
+OrderedConfiguration = Dict[str, Configuration]
 
 
 class Tree:
@@ -116,7 +118,7 @@ class Tree:
         """
         return node.factor, node.sequence, len(node.parents), node.name
 
-    def order_nodes(self, configurations: Dict[str, Configuration]) -> Tuple[List[str], List[Configuration]]:
+    def order_nodes(self, configurations: Dict[str, Configuration]) -> Tuple[List[str], OrderedConfiguration]:
         """
         Orders nodes based on dependencies and sequence.
         Args:
@@ -126,12 +128,15 @@ class Tree:
                 - A list of missing dependencies.
                 - An ordered list of configurations.
         """
+        reversed_depends: Dict[str, List[str]] = {}
         ordered_names: List[str] = []
-        ordered_configurations: List[Configuration] = []
+        ordered_configurations: Dict[str, Configuration] = OrderedDict()
         for node in sorted(self._collect_all_nodes(self._modules[self._default]), key=self._sort_all_nodes):
-            ordered_configurations.append(configurations[node.name])
+            ordered_configurations[node.name] = configurations[node.name]
+            reversed_depends[node.name] = [_node.name for _node in node.children]
             ordered_names.append(node.name)
-        for configuration in ordered_configurations:
+        for configuration in ordered_configurations.values():
+            configuration.reversed_depends = reversed_depends[configuration.name]
             configuration.depends = [name for name in ordered_names if name in configuration.depends]
         return self._incorrect, ordered_configurations
 
