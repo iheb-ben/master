@@ -215,6 +215,8 @@ class MongoDBManager(Manager, metaclass=ABCMetaManager):
     __value_path__ = 'master.mongo_manager'
     __slots__ = ('database_name', 'connections', 'required')
 
+    DEFAULT_COLLECTION_NAME = 'documents'
+
     def __init__(self, database_name: Optional[str] = None):
         self.database_name: Optional[str] = database_name
         self.connections: Dict[str, MongoClient] = {}
@@ -339,7 +341,7 @@ class MongoDBManager(Manager, metaclass=ABCMetaManager):
         manager = cls()
         client = manager.admin_connection()
         # In MongoDB, databases are created lazily. Accessing a collection creates the DB.
-        client[database_name].create_collection("documents")
+        client[database_name].create_collection(cls.DEFAULT_COLLECTION_NAME)
 
     def __del__(self):
         for connection in self.connections.values():
@@ -351,7 +353,6 @@ def main():
     if not PostgresManager.check_database_exists(default_db_name):
         PostgresManager.create_database(default_db_name)
         _logger.debug(f'Database "{default_db_name}" created successfully in PostgreSQL.')
-    if arguments.configuration['db_mongo']:
-        if not MongoDBManager.check_database_exists(default_db_name):
-            MongoDBManager.create_database(default_db_name)
-            _logger.debug(f'Database "{default_db_name}" created successfully in MongoDB.')
+    if arguments.configuration['db_mongo'] and not MongoDBManager.check_database_exists(default_db_name):
+        MongoDBManager.create_database(default_db_name)
+        _logger.debug(f'Database "{default_db_name}" created successfully in MongoDB.')

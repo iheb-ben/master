@@ -38,7 +38,7 @@ class Configuration:
         depends: Optional[Union[List[str], str]] = None,
         sequence: Optional[int] = None,
         auto_install: bool = False,
-        mode: Optional[str] = None
+        mode: Optional[Union[str, ConfigurationMode]] = None
     ):
         """
         Initializes a Configuration instance.
@@ -56,7 +56,7 @@ class Configuration:
             mode = ConfigurationMode.INSTANCE
         elif isinstance(mode, str):
             mode = ConfigurationMode.from_value(mode.lower())
-        else:
+        elif not isinstance(mode, ConfigurationMode):
             raise ValueError(f'Addon "{self.name}" issue: Incorrect mode value {mode}.')
         self.mode = mode
         base_addon = arguments.configuration['master_base_addon']
@@ -72,7 +72,7 @@ class Configuration:
         # Determine sequence with fallback logic
         if sequence is None or sequence <= 0:
             sequence = 16
-            _logger.warning(f'Addon "{self.name}" issue: Incorrect or missing addon sequence, set to default 16.')
+            _logger.debug(f'Addon "{self.name}": set sequence to default 16.')
         self.sequence = sequence
         # Ensure master_base_addon is included as the first dependency
         if base_addon and self.name != base_addon and base_addon not in self.depends:
