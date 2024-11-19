@@ -18,7 +18,7 @@ def main():
     _logger.info(f"Master Password: {config.parser.arguments.configuration['master_password']}")
     config.parser.arguments.save_configuration()
     core.db.main()
-    core.module.attach_modules(True)
+    core.module.read_modules(True)
     if config.parser.arguments.configuration['pipeline']:
         core.pipeline.main()
     else:

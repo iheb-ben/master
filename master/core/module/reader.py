@@ -2,79 +2,13 @@ import subprocess
 import sys
 from os import listdir
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Union, Generator, Iterable
+from typing import Dict, Any, Optional, Generator
 import json
 from master.config.logging import get_logger
 from master.config.parser import arguments
+from master.core.module import Configuration
 
 _logger = get_logger(__name__)
-
-
-# noinspection GrazieInspection
-class Configuration:
-    """
-    Represents a module configuration.
-    Attributes:
-        path (str): The path to the module.
-        depends (List[str]): List of module dependencies.
-        sequence (int): Load sequence of the module.
-    """
-    __slots__ = ('path', 'depends', 'sequence')
-
-    def __init__(
-        self,
-        path: str,
-        depends: Optional[Union[List[str], str]] = None,
-        sequence: Optional[int] = None
-    ):
-        """
-        Initializes a Configuration instance.
-        Args:
-            path (str): The path to the module.
-            depends (Optional[Union[List[str], str]]): Module dependencies, can be a list or a single string.
-            sequence (Optional[int]): The load sequence for the module.
-        """
-        self.path = path
-        base_name = arguments.configuration['master_base_addon']
-        # Normalize dependencies to a list of non-empty strings
-        if depends is None:
-            depends = []
-        elif isinstance(depends, str):
-            depends = [depends]
-        if not isinstance(depends, Iterable) or isinstance(depends, bytes):
-            raise ValueError(f'Addon {self.name} issue: Dependency format is incorrect in path "{path}"')
-        self.depends = [name.strip() for name in depends if name]
-        # Determine sequence with fallback logic
-        if sequence is None or sequence <= 0:
-            sequence = 16
-            _logger.warning(f'Addon {self.name} issue: Incorrect or missing addon sequence, set to default 16.')
-        self.sequence = sequence
-        # Ensure master_base_addon is included as the first dependency
-        if base_name and self.name != base_name and base_name not in self.depends:
-            self.depends.insert(0, base_name)
-
-    @property
-    def name(self) -> str:
-        """
-        Extracts the module name from its path.
-        Returns:
-            str: The name of the module.
-        """
-        assert self.path, 'Module "path" value is required'
-        return Path(self.path).name.strip()
-
-    def to_dict(self) -> dict:
-        """
-        Converts the configuration to a dictionary format.
-        Returns:
-            dict: A dictionary representation of the configuration.
-        """
-        return {
-            'name': self.name,
-            'path': self.path,
-            'sequence': self.sequence,
-            'depends': self.depends,
-        }
 
 
 def iterate_addons_paths() -> Generator[Path, None, None]:
@@ -141,13 +75,11 @@ def read_module_configuration(module_path: Path) -> Optional[Dict[str, Any]]:
     return None
 
 
-def read_configurations(shutdown: bool = False) -> Iterable[Configuration]:
+def read_configurations() -> Dict[str, Configuration]:
     """
     Reads and parses configurations for all valid modules in the addon paths.
-    Args:
-        shutdown (bool): If True, exits the application if no configurations are found.
     Returns:
-        Iterable[Configuration]: An iterable of Configuration objects.
+        Dict[str, Configuration]: An iterable of Configuration objects.
     """
     configurations: Dict[str, Configuration] = {}
     for addons_path in iterate_addons_paths():
@@ -161,14 +93,13 @@ def read_configurations(shutdown: bool = False) -> Iterable[Configuration]:
                 continue
             configuration_data = read_module_configuration(module_path)
             if configuration_data is not None:
-                configuration_data['path'] = str(module_path)
+                configuration_data['path'] = module_path
                 configurations[module_name] = Configuration(**configuration_data)
                 is_empty = False
             else:
                 _logger.warning(f'Ignored invalid module: {module_name}')
         if is_empty:
             _logger.warning(f'No valid modules found in: {addons_path}')
-    if not configurations and shutdown:
+    if not configurations:
         _logger.error('No configurations found. Shutting down.')
-        sys.exit(-1)
-    return configurations.values()
+    return configurations
