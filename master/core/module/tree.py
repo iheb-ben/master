@@ -114,7 +114,7 @@ class Tree:
         Args:
             node (Node): The node to sort.
         Returns:
-            Tuple[int, int, str]: A tuple used to sort nodes by the number of parents, sequence, and name.
+            Tuple[int, int, int, str]: A tuple used to sort nodes by the factor, sequence, number of parents, and name.
         """
         return node.factor, node.sequence, len(node.parents), node.name
 
@@ -124,9 +124,8 @@ class Tree:
         Args:
             configurations (Dict[str, Configuration]): A mapping of module names to configurations.
         Returns:
-            Tuple[List[str], List[Configuration]]:
-                - A list of missing dependencies.
-                - An ordered list of configurations.
+            - A list of missing dependencies.
+            - An ordered dictionary configurations.
         """
         reversed_depends: Dict[str, List[str]] = {}
         ordered_names: List[str] = []
