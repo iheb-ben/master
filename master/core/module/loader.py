@@ -59,7 +59,6 @@ def import_module(name: str, configurations: OrderedConfiguration):
         configurations (OrderedConfiguration): The ordered configuration of all modules.
     """
     if hasattr(addons, name):
-        _logger.debug(f"Module {name} is already imported.")
         return
     # Import dependencies recursively
     for dependency in configurations[name].depends:

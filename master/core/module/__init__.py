@@ -105,14 +105,14 @@ def read_modules() -> tree.OrderedConfiguration:
     """
     configurations = reader.read_configurations()
     order_tree = tree.Tree(configurations[arguments.configuration['master_base_addon']])
-    ordered_configurations = configurations.values()
-    for configuration in ordered_configurations:
+    configurations_list = configurations.values()
+    for configuration in configurations_list:
         order_tree.build_node(configuration)
-    order_tree.build_links(ordered_configurations)
-    incorrect, ordered_configurations = order_tree.order_nodes(configurations)
+    order_tree.build_links(configurations_list)
+    incorrect, configurations = order_tree.order_nodes(configurations)
     if incorrect:
         _logger.warning(f'Missing dependencies {incorrect}.')
-    return ordered_configurations
+    return configurations
 
 
 def main():
