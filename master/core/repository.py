@@ -14,7 +14,8 @@ _logger = get_logger(__name__)
 
 
 class GitRepoManager(metaclass=Meta):
-    __meta_path__ = 'core.git.manager'
+    __meta_path__ = 'master.core.GitRepoManager'
+    __value_path__ = 'master.git_repository'
     __slots__ = ('repos', 'last_commits')
 
     def __init__(self):

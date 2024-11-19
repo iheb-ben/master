@@ -67,6 +67,7 @@ class Manager(ABC):
 
 class PostgresManager(Manager, metaclass=ABCMetaManager):
     __meta_path__ = 'master.core.PostgresManager'
+    __value_path__ = 'master.pg_manager'
     __slots__ = ('database_name', 'connections', 'required')
 
     def __init__(self, database_name: Optional[str] = None):
@@ -211,6 +212,7 @@ class PostgresManager(Manager, metaclass=ABCMetaManager):
 
 class MongoDBManager(Manager, metaclass=ABCMetaManager):
     __meta_path__ = 'master.core.MongoDBManager'
+    __value_path__ = 'master.mongo_manager'
     __slots__ = ('database_name', 'connections', 'required')
 
     def __init__(self, database_name: Optional[str] = None):
