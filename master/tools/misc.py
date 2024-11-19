@@ -122,3 +122,14 @@ def find_available_port(port: int) -> int:
             already_checked.add(port)
             port += 1
     return port
+
+
+def clean_end_of_line(s: str) -> str:
+    """
+    Removes trailing end-of-line characters (e.g., \n, \r) and whitespace from a string.
+    Args:
+        s (str): The string to clean.
+    Returns:
+        str: The cleaned string.
+    """
+    return s.rstrip("\r\n")

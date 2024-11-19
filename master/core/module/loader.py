@@ -7,6 +7,7 @@ from master.core.db import PostgresManager
 from master.core.module import Configuration, ConfigurationMode
 from master.core.module.tree import OrderedConfiguration
 from master.exceptions.db import DatabaseSessionError
+from master.tools.misc import clean_end_of_line
 import psycopg2
 import sys
 
@@ -43,7 +44,7 @@ def default_modules(configurations: Iterable[Configuration]) -> List[str]:
             installed_modules = [row[0] for row in cursor.fetchall()]
             _logger.debug(f"Retrieved installed modules from the database: {installed_modules}")
     except (psycopg2.Error, DatabaseSessionError) as e:
-        _logger.warning(f"Could not retrieve default modules from database: {e}")
+        _logger.warning(f"Could not retrieve default modules from database: {clean_end_of_line(str(e))}")
     finally:
         if not installed_modules:
             _logger.warning("Falling back to local configurations for default modules.")
