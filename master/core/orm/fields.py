@@ -1,7 +1,7 @@
-from master.core.api import Meta
+from master.core.api import Class
 
 
-class Field(metaclass=Meta):
+class Field(Class):
     __slots__ = ('label', 'groups', 'unique', 'required')
 
     def __init__(self, label=None, groups=None, required=False, unique=False):

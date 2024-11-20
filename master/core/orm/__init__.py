@@ -2,7 +2,7 @@ from typing import Optional, Type
 import psycopg2
 from master.config.logging import get_logger
 from master.config.parser import arguments
-from master.core.api import Meta
+from master.core.api import Class
 from . import models
 from . import fields
 
@@ -12,8 +12,12 @@ Char = fields.Char
 
 _logger = get_logger(__name__)
 
+Model = models.Model
+AbstractModel = models.AbstractModel
+TransientModel = models.TransientModel
 
-class DBStructureManager(metaclass=Meta):
+
+class DBStructureManager(Class):
     __meta_path__ = 'master.core.DBStructureManager'
     __value_path__ = 'master.db_structure_manager'
     __slots__ = ('connection', 'grouped')

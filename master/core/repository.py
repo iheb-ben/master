@@ -1,6 +1,6 @@
 from pathlib import Path
 from shutil import rmtree
-from master.core.api import Meta
+from master.core.api import Class
 from master.config.logging import get_logger
 from master.tools.path import is_folder_empty
 from git import Repo, GitCommandError
@@ -13,7 +13,7 @@ import os
 _logger = get_logger(__name__)
 
 
-class GitRepoManager(metaclass=Meta):
+class GitRepoManager(Class):
     __meta_path__ = 'master.core.GitRepoManager'
     __value_path__ = 'master.git_repository'
     __slots__ = ('repos', 'last_commits')

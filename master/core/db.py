@@ -1,4 +1,4 @@
-from abc import ABC, abstractmethod, ABCMeta
+from abc import ABC, abstractmethod
 from contextlib import contextmanager
 from typing import Optional, Dict, Generator, List, Any, Tuple
 from pymongo import MongoClient
@@ -7,17 +7,12 @@ import psycopg2
 from psycopg2 import sql
 from master.config.logging import get_logger
 from master.config.parser import arguments
-from master.core.api import Meta
+from master.core.api import Class
 from master.exceptions.db import DatabaseAccessError, DatabaseSessionError, DatabaseRoleError
 
 ROLE_COLLECTION_NAME = "user_roles"  # Collection for storing user roles in MongoDB
 ROLE_TABLE_NAME = "user_roles"  # Table for storing user roles in PostgreSQL
 _logger = get_logger(__name__)
-
-
-# Define a new metaclass that combines ABCMeta and Meta
-class ABCMetaManager(ABCMeta, Meta):
-    pass
 
 
 class Manager(ABC):
@@ -65,7 +60,7 @@ class Manager(ABC):
         pass
 
 
-class PostgresManager(Manager, metaclass=ABCMetaManager):
+class PostgresManager(Class, Manager):
     __meta_path__ = 'master.core.PostgresManager'
     __value_path__ = 'master.pg_manager'
     __slots__ = ('database_name', 'connections', 'required')
@@ -210,7 +205,7 @@ class PostgresManager(Manager, metaclass=ABCMetaManager):
             connection.close()
 
 
-class MongoDBManager(Manager, metaclass=ABCMetaManager):
+class MongoDBManager(Class, Manager):
     __meta_path__ = 'master.core.MongoDBManager'
     __value_path__ = 'master.mongo_manager'
     __slots__ = ('database_name', 'connections', 'required')

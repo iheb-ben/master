@@ -29,8 +29,9 @@ class Configuration:
         sequence (int): Load sequence of the module.
         auto_install (bool): Default state of the module.
         mode (ConfigurationMode): Module mode.
+        kwargs (Dict[str, Any]): Unsupported arguments
     """
-    __slots__ = ('name', 'location', 'reversed_depends', 'depends', 'sequence', 'auto_install', 'mode')
+    __slots__ = ('name', 'location', 'reversed_depends', 'depends', 'sequence', 'auto_install', 'mode', 'kwargs')
 
     def __init__(
         self,
@@ -38,7 +39,8 @@ class Configuration:
         depends: Optional[Union[List[str], str]] = None,
         sequence: Optional[int] = None,
         auto_install: bool = False,
-        mode: Optional[Union[str, ConfigurationMode]] = None
+        mode: Optional[Union[str, ConfigurationMode]] = None,
+        **kwargs
     ):
         """
         Initializes a Configuration instance.
@@ -79,6 +81,9 @@ class Configuration:
             self.depends.insert(0, base_addon)
         if base_addon and self.name == base_addon:
             self.depends = []
+        self.kwargs = kwargs
+        if kwargs:
+            _logger.warning(f'Addon "{self.name}" unsupported parameters: {list(kwargs.keys())}')
 
     @property
     def path(self) -> Path:
@@ -103,22 +108,26 @@ def read_modules() -> tree.OrderedConfiguration:
     Returns:
         OrderedConfiguration: An ordered configuration of modules.
     """
-    configurations = reader.read_configurations()
-    order_tree = tree.Tree(configurations[arguments.configuration['master_base_addon']])
-    configurations_list = configurations.values()
+    current_configurations = reader.read_configurations()
+    order_tree = tree.Tree(current_configurations[arguments.configuration['master_base_addon']])
+    configurations_list = current_configurations.values()
     for configuration in configurations_list:
         order_tree.build_node(configuration)
     order_tree.build_links(configurations_list)
-    incorrect, configurations = order_tree.order_nodes(configurations)
+    incorrect, current_configurations = order_tree.order_nodes(current_configurations)
     if incorrect:
         _logger.warning(f'Missing dependencies {incorrect}.')
-    return configurations
+    return current_configurations
+
+
+configurations: tree.OrderedConfiguration = {}
 
 
 def main():
     """
     Main entry point for module loading and initialization.
     """
+    global configurations
     configurations = read_modules()
     if not configurations:
         _logger.error('No configurations found. Shutting down.')

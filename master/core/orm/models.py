@@ -1,61 +1,44 @@
-from abc import ABCMeta, ABC, abstractmethod
 from collections import defaultdict
-from typing import Dict, Any, List, Callable
-from master.core.api import Meta
-
-
-class ABCMetaModel(ABCMeta, Meta):
-    pass
-
-
-class Interface(ABC):
-    @abstractmethod
-    def create(self, values: Dict[str, Any]) -> 'Any':
-        """Create a new record."""
-        pass
-
-    @abstractmethod
-    def read(self, domain: List[Any], fields: List[str]) -> 'List[Dict]':
-        """Read records fields."""
-        pass
-
-    @abstractmethod
-    def write(self, values: Dict[str, Any]) -> bool:
-        """Update current records."""
-        pass
-
-    @abstractmethod
-    def unlink(self) -> None:
-        """Remove current records."""
-        pass
-
+from master.core.api import Class
+from typing import Optional, List, Type, Union
 
 models = defaultdict(list)
-_base_models_defined: Callable[[], bool] = lambda: 'Model' in globals()
 
 
-class AbstractModel(metaclass=ABCMetaModel):
+class AbstractModel(Class):
+    """
+    Base class for models, providing dynamic inheritance and registration in the `models` registry.
+    """
+    __meta_path__ = 'master.core.orm.AbstractModel'
+    _inherit: Optional[Union[str, List[str]]] = None
+    _name: Optional[str] = None
+
     @classmethod
-    def _attach_klass(cls):
-        if _base_models_defined():
-            if not hasattr(cls, '_inherit'):
+    def _attach_klass(cls) -> Optional[Type['AbstractModel']]:
+        """
+        Dynamically attaches the class to the `models` registry based on its `_name`.
+        Returns:
+            cls: The class itself if `_name` is valid, or None otherwise.
+        """
+        # Handle inheritance relationships
+        if 'Model' in globals():
+            if not cls._inherit:
                 cls._inherit = []
-            if not isinstance(cls._inherit, list):
+            elif not isinstance(cls._inherit, list):
                 cls._inherit = [cls._inherit]
-            if not hasattr(cls, '_name') and cls._inherit:
+            # If `_name` is not set, use the last inherited model name
+            if not cls._name and cls._inherit:
                 cls._name = cls._inherit[-1]
-        if hasattr(cls, '_name'):
+        # Register the class if `_name` is valid
+        if cls._name:
             models[cls._name].append(cls)
+            return cls
+        return None
 
 
-class TransientModel(AbstractModel, Interface, ABC, metaclass=ABCMetaModel):
-    pass
+class TransientModel(AbstractModel):
+    __meta_path__ = 'master.core.orm.TransientModel'
 
 
-class Model(TransientModel, ABC, metaclass=ABCMetaModel):
-    @classmethod
-    def _attach_klass(cls):
-        super()._attach_klass()
-        basic_model = 'base.model'
-        if _base_models_defined() and getattr(cls, '_name', None) != basic_model and basic_model not in getattr(cls, '_inherit', []):
-            cls._inherit.insert(0, basic_model)
+class Model(TransientModel):
+    __meta_path__ = 'master.core.orm.Model'
