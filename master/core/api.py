@@ -1,4 +1,3 @@
-from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Optional, Any, Type, List, Dict, Callable
 from master.config.logging import get_logger
@@ -13,17 +12,7 @@ _logger = get_logger(__name__)
 classes: Dict[str, List[Type[Any]]] = defaultdict(list)
 
 
-class AbstractMeta(ABC):
-    """
-    Abstract base class defining the required method for metaclasses.
-    """
-    @classmethod
-    @abstractmethod
-    def attach_element(cls, *args, **kwargs):
-        pass
-
-
-class Meta(AbstractMeta, type):
+class Meta(type):
     """
     Meta-class for dynamically managing and merging classes.
     """
@@ -40,7 +29,7 @@ class Meta(AbstractMeta, type):
         meta_path = getattr(klass, '__meta_path__', None)
         if meta_path:
             classes[meta_path].append(klass)
-            _logger.debug(f"Attached class '{klass.__name__}' to meta_path '{meta_path}'")
+            _logger.debug(f"Attached class '{klass.__module__}.{klass.__name__}' to meta_path '{meta_path}'")
         return klass
 
     @classmethod
@@ -82,7 +71,7 @@ class Meta(AbstractMeta, type):
         for klass in reversed(classes_list):
             if not any(issubclass(other, klass) for other in classes_list if other != klass):
                 result.append(klass)
-        return result
+        return [klass for klass in reversed(result)]
 
 
 class Class:
@@ -117,15 +106,16 @@ def debounce(wait: float):
         Callable: The decorated function.
     """
     def decorator(func: Callable):
-        # noinspection PyProtectedMember
         @wraps(func)
         def wrapper(*args, **kwargs):
-            if hasattr(wrapper, '_timer'):
+            timer: Optional[threading.Timer] = getattr(wrapper, '_timer', None)
+            if timer:
                 # Cancel the previous timer if the function is called again
-                wrapper._timer.cancel()
+                timer.cancel()
             # Set a new timer to call the function after `wait` seconds
-            wrapper._timer = threading.Timer(wait, func, args=args, kwargs=kwargs)
-            wrapper._timer.start()
+            timer = threading.Timer(wait, func, args=args, kwargs=kwargs)
+            setattr(wrapper, '_timer', timer)
+            timer.start()
         return wrapper
     return decorator
 
@@ -138,32 +128,32 @@ def compile_classes():
         if not class_list:
             _logger.warning(f"No classes found for meta_path: {meta_path}")
             continue
-        if len(class_list) == 1:
-            continue
         # Deduplicate classes to avoid MRO conflicts
         filtered_classes = Meta.deduplicate_classes(class_list)
+        if not filtered_classes:
+            continue
         # Generate the new class name and module path
         new_class_name = "Super" + meta_path.split(".")[-1]
         module_path = '.'.join(meta_path.split(".")[:-1])
-        if len(filtered_classes) == 1:
-            # Dynamically assign the new class to the appropriate module
-            module = sys.modules[module_path]
-            setattr(module, meta_path.split(".")[-1], filtered_classes[0])
-        else:
-            try:
-                # Create the new class
+        try:
+            if len(filtered_classes) == 1:
+                # If only one class remains after deduplication, directly assign it
+                new_class = filtered_classes[0]
+            else:
+                # Create the new merged class
                 new_class = Meta.create_merged_class(
                     new_class_name,
                     filtered_classes,
                     {'__module__': module_path, '__meta_path__': None}
                 )
-                # Dynamically assign the new class to the appropriate module
-                module = sys.modules[module_path]
-                setattr(module, meta_path.split(".")[-1], new_class)
+            # Dynamically assign the new class to the appropriate module
+            module = sys.modules[module_path]
+            setattr(module, meta_path.split(".")[-1], new_class)
+            if len(filtered_classes) > 1:
                 _logger.info(f"Assigned merged class '{new_class_name}' to '{meta_path}'")
-            except KeyError:
-                _logger.error(f"Module '{module_path}' not found for meta_path: {meta_path}")
-            except TypeError as e:
-                _logger.error(f"Failed to create merged class for meta_path '{meta_path}': {e}")
-            except Exception as e:
-                _logger.error(f"Unexpected error during class compilation for meta_path '{meta_path}': {e}", exc_info=True)
+        except KeyError:
+            _logger.error(f"Module '{module_path}' not found for meta_path: {meta_path}")
+        except TypeError as e:
+            _logger.error(f"Failed to create merged class for meta_path '{meta_path}': {e}")
+        except Exception as e:
+            _logger.error(f"Unexpected error during class compilation for meta_path '{meta_path}': {e}", exc_info=True)
