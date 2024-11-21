@@ -50,6 +50,7 @@ public_key_path: Optional[Path] = None
 def configure_system():
     """
     Configures the system by ensuring consistency between RSA private and public keys.
+
     - If only the private key exists, regenerates the public key from it.
     - If only the public key exists, renames it and recreates both keys.
     - If neither key exists, generates and saves both keys.

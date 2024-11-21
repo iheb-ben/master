@@ -342,6 +342,9 @@ class MongoDBManager(Class, Manager):
 
 
 def main():
+    """
+    Main entry point for initialization databases.
+    """
     default_db_name: str = arguments.read_parameter('default_db_name')
     if not PostgresManager.check_database_exists(default_db_name):
         PostgresManager.create_database(default_db_name)

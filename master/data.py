@@ -1,8 +1,6 @@
 from typing import Optional
 from master.config import arguments
-from master.core.api import Class
 from master import core
-from master.tools.misc import call_classmethod
 import re
 
 
@@ -17,3 +15,11 @@ def initialise_values():
     global postgres_manager, db_structure_manager
     postgres_manager = core.PostgresManager(arguments.read_parameter('default_db_name'))
     db_structure_manager = core.DBStructureManager(postgres_manager.admin_connection())
+
+
+def main():
+    """
+    Main entry point for building classes and ORM models.
+    """
+    core.api.compile_classes()
+    initialise_values()

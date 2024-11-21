@@ -1,4 +1,5 @@
 from . import parser
+from typing import Optional
 from master.tools.ip import get_public_ip, get_private_ip, get_mac_address
 from master.tools.misc import temporairy_directory
 from pathlib import Path
@@ -34,7 +35,7 @@ def system_directory() -> Path:
     Returns:
         Path: The path to the storage directory.
     """
-    store_folder = arguments.get('store_folder', None)
+    store_folder: Optional[str] = arguments.get('store_folder', None)
     if not store_folder:
         store_folder = str(temporairy_directory())
     return Path(store_folder)

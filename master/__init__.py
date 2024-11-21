@@ -1,5 +1,4 @@
 import traceback
-from typing import Optional
 from . import addons
 from . import exceptions
 from . import tools
@@ -13,8 +12,7 @@ def main():
     config.main()
     core.db.main()
     core.module.main()
-    core.api.compile_classes()
-    data.initialise_values()
+    data.main()
     if config.arguments['pipeline']:
         core.pipeline.main()
     else:
