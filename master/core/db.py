@@ -62,7 +62,6 @@ class Manager(ABC):
 
 class PostgresManager(Class, Manager):
     __meta_path__ = 'master.core.PostgresManager'
-    __value_path__ = 'master.pg_manager'
     __slots__ = ('database_name', 'connections', 'required')
 
     def __init__(self, database_name: Optional[str] = None):
@@ -207,7 +206,6 @@ class PostgresManager(Class, Manager):
 
 class MongoDBManager(Class, Manager):
     __meta_path__ = 'master.core.MongoDBManager'
-    __value_path__ = 'master.mongo_manager'
     __slots__ = ('database_name', 'connections', 'required')
 
     DEFAULT_COLLECTION_NAME = 'documents'

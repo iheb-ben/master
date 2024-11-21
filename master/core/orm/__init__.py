@@ -12,7 +12,6 @@ _logger = get_logger(__name__)
 
 class DBStructureManager(Class):
     __meta_path__ = 'master.core.DBStructureManager'
-    __value_path__ = 'master.db_structure_manager'
     __slots__ = ('connection', 'grouped')
 
     def __init__(self, connection: 'psycopg2.connection'):

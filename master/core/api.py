@@ -139,19 +139,15 @@ def compile_classes():
                 new_class = filtered_classes[0]
             else:
                 # Create the new merged class
-                new_class = Meta.create_merged_class(
-                    new_class_name,
-                    filtered_classes,
-                    {'__module__': module_path, '__meta_path__': None}
-                )
+                new_class = Meta.create_merged_class(new_class_name, filtered_classes, {'__module__': module_path, '__meta_path__': None})
             # Dynamically assign the new class to the appropriate module
             module = sys.modules[module_path]
-            setattr(module, meta_path.split(".")[-1], new_class)
+            setattr(module, meta_path.split('.')[-1], new_class)
             if len(filtered_classes) > 1:
-                _logger.info(f"Assigned merged class '{new_class_name}' to '{meta_path}'")
+                _logger.info(f'Assigned merged class "{new_class_name}" to "{meta_path}"')
         except KeyError:
-            _logger.error(f"Module '{module_path}' not found for meta_path: {meta_path}")
+            _logger.error(f'Module "{module_path}" not found for meta_path: {meta_path}')
         except TypeError as e:
-            _logger.error(f"Failed to create merged class for meta_path '{meta_path}': {e}")
+            _logger.error(f'Failed to create merged class for meta_path "{meta_path}": {e}')
         except Exception as e:
-            _logger.error(f"Unexpected error during class compilation for meta_path '{meta_path}': {e}", exc_info=True)
+            _logger.error(f'Unexpected error during class compilation for meta_path "{meta_path}": {e}', exc_info=True)

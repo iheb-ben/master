@@ -6,12 +6,9 @@ from . import tools
 from . import config
 from . import core
 from . import orm
+from . import data
 
 _logger = config.logging.get_logger(__name__)
-pg_manager: Optional[core.db.PostgresManager] = None
-mongo_manager: Optional[core.db.MongoDBManager] = None
-db_structure_manager: Optional[core.orm.DBStructureManager] = None
-git_repository: Optional[core.repository.GitRepoManager] = None
 
 
 def main():
@@ -22,6 +19,7 @@ def main():
     core.db.main()
     core.module.main()
     core.api.compile_classes()
+    data.initialise_values()
     if config.parser.arguments.configuration['pipeline']:
         core.pipeline.main()
     else:
