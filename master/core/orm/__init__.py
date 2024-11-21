@@ -6,7 +6,7 @@ from master.core.api import Class
 from . import models
 from . import fields
 
-AnyModel = Union[models.Model, models.TransientModel, models.AbstractModel]
+AnyModel = Type[models.Model | models.TransientModel | models.AbstractModel]
 TableType = Type[models.TransientModel | models.Model]
 _logger = get_logger(__name__)
 
