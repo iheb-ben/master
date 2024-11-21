@@ -1,4 +1,4 @@
-from typing import Optional, Type
+from typing import Optional, Type, Union
 import psycopg2
 from master.config.logging import get_logger
 from master.config import arguments
@@ -6,6 +6,7 @@ from master.core.api import Class
 from . import models
 from . import fields
 
+AnyModel = Union[models.Model, models.TransientModel, models.AbstractModel]
 TableType = Type[models.TransientModel | models.Model]
 _logger = get_logger(__name__)
 
@@ -90,3 +91,10 @@ class DBStructureManager(Class):
                     'data_type': data_type,
                 })
         return True
+
+
+registered_models: Dict[str, AnyModel] = {}
+
+
+def build_models():
+    print(registered_models)

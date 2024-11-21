@@ -19,3 +19,4 @@ def main():
     global postgres_manager, db_structure_manager
     postgres_manager = core.PostgresManager(arguments.read_parameter('default_db_name'))
     db_structure_manager = core.DBStructureManager(postgres_manager.admin_connection())
+    core.orm.build_models()
