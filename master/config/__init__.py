@@ -2,6 +2,7 @@ from master.tools.misc import temporairy_directory
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
 from pathlib import Path
+import sys
 
 # Current system version
 version = 1
@@ -58,6 +59,9 @@ def rename_file_if_exists(file_path: Path):
             count += 1
 
 
+_logger = logging.get_logger(__name__)
+
+
 def configure_system():
     """
     Configures the system by ensuring consistency between RSA private and public keys.
@@ -66,6 +70,9 @@ def configure_system():
     - If neither key exists, generates and saves both keys.
     - If both keys exist, does nothing.
     """
+    if parser.arguments.show_helper():
+        sys.exit(1)
+    _logger.info(f"Master Password: {parser.arguments.configuration['master_password']}")
     parser.arguments.save_configuration()
     key_location = default_keys_location()
     private_key_path = key_location.joinpath('private_key.pem')
