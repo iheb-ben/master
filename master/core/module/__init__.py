@@ -1,12 +1,13 @@
 import sys
 from pathlib import Path
 from typing import Optional, Union, List, Iterable
+from master import addons
 from master.config import arguments
 from master.config.logging import get_logger
 from master.tools.collection import OrderedSet
 from master.tools.enums import Enum
 from master.core.db import PostgresManager
-from master import addons
+from master.data import git_repo_manager
 
 _logger = get_logger(__name__)
 
@@ -127,6 +128,8 @@ def main():
     """
     Main entry point for module loading and initialization.
     """
+    if not arguments['pipeline']:
+        git_repo_manager.setup()
     global configurations
     configurations = read_modules()
     if not configurations:

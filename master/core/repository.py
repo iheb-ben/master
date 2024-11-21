@@ -1,6 +1,6 @@
 from pathlib import Path
 from shutil import rmtree
-from master.core.api import Class
+from master.config import arguments
 from master.config.logging import get_logger
 from master.tools.path import is_folder_empty
 from git import Repo, GitCommandError
@@ -13,8 +13,7 @@ import os
 _logger = get_logger(__name__)
 
 
-class GitRepoManager(Class):
-    __meta_path__ = 'master.core.GitRepoManager'
+class GitRepoManager:
     __slots__ = ('repos', 'last_commits')
 
     def __init__(self):
@@ -114,11 +113,8 @@ class GitRepoManager(Class):
             observer.stop()
         observer.join()
 
-
-# Usage example
-# manager = GitRepoManager()
-# manager.clone("https://github.com/example/repo1.git", "repo1")
-# manager.switch_branch("repo1", "main")
-# manager.pull("repo1")
-# manager.commit_and_push("repo1", "Update README")
-# manager.watch_changes("repo1", lambda name: print(name))
+    def setup(self):
+        for repo_details in arguments['git']:
+            self.clone(**repo_details)
+        for path in self.repos.keys():
+            arguments['addons'].append(str(path))

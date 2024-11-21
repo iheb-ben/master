@@ -8,7 +8,7 @@ import re
 postgres_manager: Optional[core.db.PostgresManager] = None
 mongo_db_manager: Optional[core.db.MongoDBManager] = None
 db_structure_manager: Optional[core.orm.DBStructureManager] = None
-git_repo_manager: Optional[core.repository.GitRepoManager] = None
+git_repo_manager = core.GitRepoManager() if not arguments['pipeline'] else None
 
 
 def main():

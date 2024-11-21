@@ -89,7 +89,7 @@ def read_configurations() -> Dict[str, Configuration]:
         is_empty = True
         for module_name in listdir(addons_path):
             module_path = addons_path / module_name
-            if module_path.is_file() or module_name == '__pycache__':
+            if module_path.is_file() or module_name == '__pycache__' or module_name.startswith('.'):
                 continue
             configuration_data = read_module_configuration(module_path)
             if configuration_data is not None:
