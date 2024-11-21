@@ -1,10 +1,7 @@
-from master.config import version
 from master.tools.enums import Enum
 from typing import Optional, Union, Any, Type
 from master.tools.collection import LastIndexOrderedSet, OrderedSet
-from master.tools.ip import get_public_ip, get_private_ip, get_mac_address
 from master.tools.misc import generate_unique_string, find_available_port, temporairy_directory, has_method, call_method
-import platform
 import argparse
 import os
 import sys
@@ -39,7 +36,7 @@ class LoggerType(Enum):
     NOTSET = 'NOTSET'
 
 
-class ArgumentParser:
+class ArgumentParser(dict):
     """Handles parsing and storage of system settings and configuration for ERP."""
     __slots__ = ('signature', 'configuration', 'stored')
 
@@ -52,94 +49,82 @@ class ArgumentParser:
         Raises:
             AssertionError: If mode is not provided.
         """
+        super().__init__()
         assert mode, 'Mode cannot be empty'
         if not isinstance(mode, Mode):
             mode = Mode.from_value(mode.lower())
         self.stored = list()
         # Default configuration settings
-        self.configuration = configuration
-        self.setdefault('master_configuration_name', 'configuration.json', str)
-        self.setdefault('master_base_addon', 'base', str)
-        self.setdefault('master_password', generate_unique_string(20, '<>\'",.:;[]`/\\'), str, True)
-        self.setdefault('log_file', str(temporairy_directory().joinpath('MASTER.log')), str)
-        self.setdefault('log_level', LoggerType.DEBUG.value, str)
-        self.setdefault('db_hostname', 'localhost', str)
-        self.setdefault('db_port', 5432, int)
-        self.setdefault('db_password', 'postgres', str)
-        self.setdefault('db_user', 'postgres', str)
-        self.setdefault('db_mongo', False, bool)
-        if self.configuration['db_mongo']:
-            self.setdefault('db_mongo_security_authorization', False, bool)
-            self.setdefault('db_mongo_hostname', 'localhost', str)
-            self.setdefault('db_mongo_port', 27017, int)
-            self.setdefault('db_mongo_password', 'mongo', str)
-            self.setdefault('db_mongo_user', 'mongo', str)
-        self.setdefault('pipeline', True, bool)
-        if self.configuration['pipeline']:
-            self.setdefault('pipeline_db_name', 'master_pipelines', str)
-            self.setdefault('pipeline_port', find_available_port(9002), int)
+        self.update(configuration)
+        self.add('master_configuration_name', 'configuration.json', str)
+        self.add('master_base_addon', 'base', str)
+        self.add('master_password', generate_unique_string(20, '<>\'",.:;[]`/\\'), str, True)
+        self.add('log_file', str(temporairy_directory().joinpath('MASTER.log')), str)
+        self.add('log_level', LoggerType.DEBUG.value, str)
+        self.add('db_hostname', 'localhost', str)
+        self.add('db_port', 5432, int)
+        self.add('db_password', 'postgres', str)
+        self.add('db_user', 'postgres', str)
+        self.add('db_mongo', False, bool)
+        if self['db_mongo']:
+            self.add('db_mongo_security_authorization', False, bool)
+            self.add('db_mongo_hostname', 'localhost', str)
+            self.add('db_mongo_port', 27017, int)
+            self.add('db_mongo_password', 'mongo', str)
+            self.add('db_mongo_user', 'mongo', str)
+        self.add('pipeline', True, bool)
+        if self['pipeline']:
+            self.add('pipeline_db_name', 'master_pipelines', str)
+            self.add('pipeline_port', find_available_port(9002), int)
         else:
-            self.setdefault('pipeline_websocket_port', find_available_port(9001), int)
-            self.setdefault('db_name', 'master', str)
-            self.setdefault('hostname', 'localhost', str)
-            self.setdefault('port', find_available_port(9000), int)
-            self.setdefault('websocket_port', find_available_port(9002), int)
-        self.setdefault('git', [], list)
-        self.setdefault('addons', [], list)
+            self.add('pipeline_websocket_port', find_available_port(9001), int)
+            self.add('db_name', 'master', str)
+            self.add('hostname', 'localhost', str)
+            self.add('port', find_available_port(9000), int)
+            self.add('websocket_port', find_available_port(9002), int)
+        self.add('enviroment', mode.value, str)
+        self.add('git', [], list)
+        self.add('addons', [], list)
         # Ensure unique sets for 'addons' and 'git' settings
-        self.configuration['addons'] = LastIndexOrderedSet(self.configuration['addons'])
-        self.configuration['git'] = OrderedSet(self.configuration['git'])
-        # Basic system settings
-        self.signature = {
-            'mode': self.read_parameter('node_type').value,
-            'os_name': platform.system(),
-            'os_release': platform.release(),
-            'os_version': platform.version(),
-            'os_architecture': platform.architecture()[0],
-            'public_ip': get_public_ip(),
-            'private_ip': get_private_ip(),
-            'mac_address': get_mac_address(),
-            'python': platform.python_version(),
-            'enviroment': mode.value,
-            'version': version,
-        }
+        self['addons'] = LastIndexOrderedSet(self['addons'])
+        self['git'] = OrderedSet(self['git'])
 
     def _parameter_node_type(self) -> PipelineMode:
-        if self.configuration['pipeline']:
+        if self['pipeline']:
             return PipelineMode.MANAGER
         else:
             return PipelineMode.NODE
 
     def _parameter_default_db_name(self) -> str:
-        if self.configuration['pipeline']:
-            return self.configuration['pipeline_db_name']
+        if self['pipeline']:
+            return self['pipeline_db_name']
         else:
-            return self.configuration['db_name']
+            return self['db_name']
 
     def _parameter_mongo_db_uri(self, username: Optional[str] = None, password: Optional[str] = None, database_name: Optional[str] = None) -> str:
         uri = f'mongodb://'
-        if self.configuration['db_mongo_security_authorization']:
+        if self['db_mongo_security_authorization']:
             if not username:
                 raise ValueError('Username is mandatory')
             if not password:
                 raise ValueError('Password is mandatory')
             uri += f"{username}:{password}@"
-        uri += f"{self.configuration['db_mongo_hostname']}:{self.configuration['db_mongo_port']}"
+        uri += f"{self['db_mongo_hostname']}:{self['db_mongo_port']}"
         if database_name:
             uri += '/' + database_name
         return uri
 
     def _parameter_postgresql_db_uri(self, username: Optional[str] = None, password: Optional[str] = None, database_name: Optional[str] = None) -> str:
         uri = f'postgresql://'
-        username = username or self.configuration['db_user']
-        password = password or self.configuration['db_password']
+        username = username or self['db_user']
+        password = password or self['db_password']
         uri += f"{username}:{password}@"
         if database_name:
             uri += '/' + database_name
         return uri
 
     def _parameter_is_debug(self) -> bool:
-        return self.configuration['log_level'] == LoggerType.DEBUG.value
+        return self['log_level'] == LoggerType.DEBUG.value
 
     def read_parameter(self, name: str, *args, **kwargs) -> Any:
         method_name = '_parameter_' + name
@@ -147,9 +132,9 @@ class ArgumentParser:
             raise AttributeError(f'Parameter "{name}" not found')
         return call_method(self, method_name, *args, **kwargs)
 
-    def setdefault(self, key: str, default_value: Any, ValueType: Optional[Type[Any]] = None, store: bool = False):
-        self.configuration.setdefault(key, default_value)
-        value = self.configuration[key]
+    def add(self, key: str, default_value: Any, ValueType: Optional[Type[Any]] = None, store: bool = False):
+        self.setdefault(key, default_value)
+        value = self[key]
         if value and ValueType and not isinstance(value, ValueType):
             raise ValueError(f'Inccorect configuration value for parameter "{key}"')
         if store:
@@ -160,7 +145,7 @@ class ArgumentParser:
         return any(arg in ['-h', '--help'] for arg in sys.argv)
 
     def save_configuration(self):
-        values = {k: i for k, i in self.configuration.items() if k in self.stored}
+        values = {k: i for k, i in self.items() if k in self.stored}
         location = default_configuration()
         if location.exists():
             with open(location, 'r+') as file:
@@ -210,7 +195,3 @@ def parse_arguments() -> 'ArgumentParser':
         except FileNotFoundError:
             pass
         return ArgumentParser(parsed_arguments.mode, configuration)
-
-
-# Global variable to store parsed arguments
-arguments = parse_arguments()

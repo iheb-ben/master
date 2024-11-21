@@ -1,7 +1,7 @@
 from typing import Optional, Type
 import psycopg2
 from master.config.logging import get_logger
-from master.config.parser import arguments
+from master.config import arguments
 from master.core.api import Class
 from . import models
 from . import fields

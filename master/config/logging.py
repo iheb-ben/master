@@ -1,7 +1,7 @@
-from ..tools.enums import Enum
-import logging
 from typing import List, Dict, Optional, Union
-from .parser import arguments
+from master.tools.enums import Enum
+from master.config import arguments
+import logging
 
 
 class LoggerType(Enum):
@@ -23,7 +23,7 @@ def add_handler(handler: logging.Handler, add_default: bool = True):
     handlers.append(handler)
 
 
-_argument_level: Optional[str] = arguments.configuration.get('log_level', None)
+_argument_level: Optional[str] = arguments.get('log_level', None)
 level: int = LoggerType.INFO.value
 if not _argument_level or _argument_level.isspace():
     logging.getLogger(__name__).warning(f'"log_level" parameter not defined, switch to "INFO"')
@@ -35,7 +35,7 @@ else:
 log_format: str = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 logging.basicConfig(level=level, format=log_format)
 handlers: List[logging.Handler] = []
-_argument_file: Optional[str] = arguments.configuration.get('log_file', None)
+_argument_file: Optional[str] = arguments.get('log_file', None)
 if _argument_file:
     add_handler(logging.FileHandler(_argument_file))
 else:

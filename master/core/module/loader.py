@@ -2,7 +2,7 @@ from importlib.util import spec_from_file_location, module_from_spec
 from typing import Iterable, List
 from master import addons
 from master.config.logging import get_logger
-from master.config.parser import arguments
+from master.config import arguments
 from master.core.db import PostgresManager
 from master.core.module import Configuration, ConfigurationMode
 from master.core.module.tree import OrderedConfiguration
@@ -22,7 +22,7 @@ def check_condition(configuration: Configuration) -> bool:
     Returns:
         bool: True if the module should be auto-installed, False otherwise.
     """
-    pipeline_mode = arguments.configuration['pipeline']
+    pipeline_mode = arguments['pipeline']
     if not pipeline_mode or (pipeline_mode and configuration.mode in [ConfigurationMode.BOTH, ConfigurationMode.PIPELINE]):
         return configuration.auto_install
     return False

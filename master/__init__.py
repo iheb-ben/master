@@ -10,12 +10,12 @@ from . import data
 
 
 def main():
-    config.configure_system()
+    config.main()
     core.db.main()
     core.module.main()
     core.api.compile_classes()
     data.initialise_values()
-    if config.parser.arguments.configuration['pipeline']:
+    if config.arguments['pipeline']:
         core.pipeline.main()
     else:
         core.server.main()

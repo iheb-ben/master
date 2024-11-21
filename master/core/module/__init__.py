@@ -1,7 +1,7 @@
 import sys
 from pathlib import Path
 from typing import Optional, Union, List, Iterable
-from master.config.parser import arguments
+from master.config import arguments
 from master.config.logging import get_logger
 from master.tools.collection import OrderedSet
 from master.tools.enums import Enum
@@ -61,7 +61,7 @@ class Configuration:
         elif not isinstance(mode, ConfigurationMode):
             raise ValueError(f'Addon "{self.name}" issue: Incorrect mode value {mode}.')
         self.mode = mode
-        base_addon = arguments.configuration['master_base_addon']
+        base_addon = arguments['master_base_addon']
         # Normalize dependencies to a list of non-empty strings
         if depends is None:
             depends = []
@@ -109,7 +109,7 @@ def read_modules() -> tree.OrderedConfiguration:
         OrderedConfiguration: An ordered configuration of modules.
     """
     current_configurations = reader.read_configurations()
-    order_tree = tree.Tree(current_configurations[arguments.configuration['master_base_addon']])
+    order_tree = tree.Tree(current_configurations[arguments['master_base_addon']])
     configurations_list = current_configurations.values()
     for configuration in configurations_list:
         order_tree.build_node(configuration)

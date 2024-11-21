@@ -1,5 +1,5 @@
 from typing import Optional
-from master.config.parser import arguments
+from master.config import arguments
 from master.core.api import Class
 from master import core
 from master.tools.misc import call_classmethod

@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Generator
 import json
 from master.config.logging import get_logger
-from master.config.parser import arguments
+from master.config import arguments
 from master.core.module import Configuration
 
 _logger = get_logger(__name__)
@@ -18,7 +18,7 @@ def iterate_addons_paths() -> Generator[Path, None, None]:
         Path: A valid addons directory path.
     """
     base_path = Path('./master/addons').absolute().resolve()
-    current_paths = [Path(p).absolute().resolve() for p in arguments.configuration['addons']]
+    current_paths = [Path(p).absolute().resolve() for p in arguments['addons']]
     if base_path not in current_paths and base_path.exists():
         current_paths.insert(0, base_path)
     elements_found = False
@@ -61,8 +61,8 @@ def read_module_configuration(module_path: Path) -> Optional[Dict[str, Any]]:
     """
     if not module_path.is_dir():
         return None
-    assert arguments.configuration['master_configuration_name'], 'Missing required system field "master_configuration_name"'
-    config_file = module_path / arguments.configuration['master_configuration_name']
+    assert arguments['master_configuration_name'], 'Missing required system field "master_configuration_name"'
+    config_file = module_path / arguments['master_configuration_name']
     if not config_file.exists():
         return None
     try:

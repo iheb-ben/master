@@ -1,11 +1,14 @@
+from typing import Optional
 import socket
 import uuid
 import requests
 
 
-def get_public_ip() -> str:
+def get_public_ip(raise_error: bool = True) -> Optional[str]:
     """
     Fetches the public IP address of the machine using an external service.
+    Args:
+        raise_error (bool): If true trigger error in case request failed
     Returns:
         str: The public IP address of the machine.
     Raises:
@@ -13,9 +16,14 @@ def get_public_ip() -> str:
     """
     try:
         response = requests.get('https://api.ipify.org?format=text', timeout=5)
-        return response.text
+        if response.status_code == 200:
+            return response.text
+        else:
+            raise requests.RequestException(f'Endpoint returned status {response.status_code}')
     except requests.RequestException as e:
-        raise SystemError(f'Error fetching public IP: {e}')
+        if raise_error:
+            raise SystemError(f'Error fetching public IP: {e}')
+        return None
 
 
 def get_mac_address() -> str:

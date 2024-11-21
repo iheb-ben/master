@@ -6,7 +6,7 @@ from pymongo.errors import PyMongoError
 import psycopg2
 from psycopg2 import sql
 from master.config.logging import get_logger
-from master.config.parser import arguments
+from master.config import arguments
 from master.core.api import Class
 from master.exceptions.db import DatabaseAccessError, DatabaseSessionError, DatabaseRoleError
 
@@ -75,8 +75,8 @@ class PostgresManager(Class, Manager):
             if username in self.connections:
                 return self.connections[username]
             self.connections[username] = connection = psycopg2.connect(
-                host=arguments.configuration['db_hostname'],
-                port=arguments.configuration['db_port'],
+                host=arguments['db_hostname'],
+                port=arguments['db_port'],
                 password=password,
                 user=username,
                 dbname=self.database_name)
@@ -87,10 +87,10 @@ class PostgresManager(Class, Manager):
 
     def admin_connection(self) -> 'psycopg2.connection':
         """Internal method to return a connection for role management."""
-        admin_username = arguments.configuration['db_user']
+        admin_username = arguments['db_user']
         if admin_username in self.connections:
             return self.connections[admin_username]
-        connection = self.establish_connection(admin_username, arguments.configuration['db_password'])
+        connection = self.establish_connection(admin_username, arguments['db_password'])
         self.required.append(connection)
         return connection
 
@@ -229,10 +229,10 @@ class MongoDBManager(Class, Manager):
 
     def admin_connection(self) -> MongoClient:
         """Returns an admin connection for role management."""
-        admin_username = arguments.configuration['db_mongo_user']
+        admin_username = arguments['db_mongo_user']
         if admin_username in self.connections:
             return self.connections[admin_username]
-        connection = self.establish_connection(admin_username, arguments.configuration['db_mongo_password'])
+        connection = self.establish_connection(admin_username, arguments['db_mongo_password'])
         self.required.append(connection)
         return connection
 
@@ -346,6 +346,6 @@ def main():
     if not PostgresManager.check_database_exists(default_db_name):
         PostgresManager.create_database(default_db_name)
         _logger.debug(f'Database "{default_db_name}" created successfully in PostgreSQL.')
-    if arguments.configuration['db_mongo'] and not MongoDBManager.check_database_exists(default_db_name):
+    if arguments['db_mongo'] and not MongoDBManager.check_database_exists(default_db_name):
         MongoDBManager.create_database(default_db_name)
         _logger.debug(f'Database "{default_db_name}" created successfully in MongoDB.')
