@@ -79,8 +79,8 @@ class ArgumentParser:
         if self.configuration['pipeline']:
             self.setdefault('pipeline_db_name', 'master_pipelines', str)
             self.setdefault('pipeline_port', find_available_port(9002), int)
-            self.setdefault('pipeline_websocket_port', find_available_port(9001), int)
         else:
+            self.setdefault('pipeline_websocket_port', find_available_port(9001), int)
             self.setdefault('db_name', 'master', str)
             self.setdefault('hostname', 'localhost', str)
             self.setdefault('port', find_available_port(9000), int)

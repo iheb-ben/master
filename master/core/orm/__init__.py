@@ -7,14 +7,7 @@ from . import models
 from . import fields
 
 TableType = Type[models.TransientModel | models.Model]
-Integer = fields.Integer
-Char = fields.Char
-
 _logger = get_logger(__name__)
-
-Model = models.Model
-AbstractModel = models.AbstractModel
-TransientModel = models.TransientModel
 
 
 class DBStructureManager(Class):

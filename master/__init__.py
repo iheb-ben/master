@@ -5,6 +5,7 @@ from . import exceptions
 from . import tools
 from . import config
 from . import core
+from . import orm
 
 _logger = config.logging.get_logger(__name__)
 pg_manager: Optional[core.db.PostgresManager] = None

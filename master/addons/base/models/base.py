@@ -1,13 +1,17 @@
 from typing import Optional, Type
-from master.core import orm
+from master.orm import models, fields
 from master.core.orm.fields import Field
 from master.tools.misc import is_field_norm_compliant
 
 BASE_MODEL = 'base.model'
 
 
-class AbstractModel(orm.AbstractModel):
+# noinspection PyProtectedMember
+class AbstractModel(models.AbstractModel):
     _name = BASE_MODEL
+
+    id = fields.Id(label='ID')
+    active = fields.Boolean(label='Active', default=True)
 
     @classmethod
     def _attach_klass(cls) -> Optional[Type['AbstractModel']]:
@@ -20,7 +24,8 @@ class AbstractModel(orm.AbstractModel):
         return result
 
 
-class Model(orm.Model):
+# noinspection PyProtectedMember
+class Model(models.Model):
     """
     A concrete model class with additional logic to enforce inheritance from `BASE_MODEL`.
     """
@@ -35,7 +40,5 @@ class Model(orm.Model):
         result = super()._attach_klass()
         if result and getattr(result, '_name', None) != BASE_MODEL and BASE_MODEL not in getattr(result, '_inherit', []):
             # Insert `BASE_MODEL` as the first inherited model
-            if not isinstance(result._inherit, list):
-                result._inherit = []
             result._inherit.insert(0, BASE_MODEL)
         return result

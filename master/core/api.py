@@ -7,7 +7,6 @@ import threading
 import sys
 
 _logger = get_logger(__name__)
-
 # Global registry for classes
 classes: Dict[str, List[Type[Any]]] = defaultdict(list)
 
@@ -16,6 +15,7 @@ class Meta(type):
     """
     Meta-class for dynamically managing and merging classes.
     """
+
     @staticmethod
     def attach_element(cls: Type[Any]):
         """
@@ -29,7 +29,7 @@ class Meta(type):
         meta_path = getattr(cls, '__meta_path__', None)
         if meta_path:
             classes[meta_path].append(cls)
-            _logger.debug(f"Attached class '{cls.__module__}.{cls.__name__}' to meta_path '{meta_path}'")
+            _logger.debug(f'Attached class "{cls.__module__}.{cls.__name__}" to meta_path "{meta_path}"')
         return cls
 
     @staticmethod
@@ -72,6 +72,7 @@ class Class:
     """
     Base class for all managed classes. Automatically registers subclasses in `Meta`.
     """
+
     def __init_subclass__(cls, **kwargs):
         """
         Automatically called when a new subclass is created. Registers the class with `Meta`.
@@ -86,6 +87,7 @@ class ClassProperty:
     """
     A decorator for creating class-level properties.
     """
+
     def __init__(self, fget: Callable):
         self.fget = fget
 
