@@ -11,15 +11,11 @@ db_structure_manager: Optional[core.orm.DBStructureManager] = None
 git_repo_manager: Optional[core.repository.GitRepoManager] = None
 
 
-def initialise_values():
+def main():
+    """
+    Main entry point for building, initialising classes and ORM models.
+    """
+    core.api.compile_classes()
     global postgres_manager, db_structure_manager
     postgres_manager = core.PostgresManager(arguments.read_parameter('default_db_name'))
     db_structure_manager = core.DBStructureManager(postgres_manager.admin_connection())
-
-
-def main():
-    """
-    Main entry point for building classes and ORM models.
-    """
-    core.api.compile_classes()
-    initialise_values()
