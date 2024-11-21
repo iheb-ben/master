@@ -16,24 +16,24 @@ class Meta(type):
     """
     Meta-class for dynamically managing and merging classes.
     """
-    @classmethod
-    def attach_element(cls, klass: Type[Any]):
+    @staticmethod
+    def attach_element(cls: Type[Any]):
         """
         Attaches a class to its corresponding meta_path registry.
         Args:
-            klass (Type[Any]): The class to attach.
+            cls (Type[Any]): The class to attach.
         Returns:
             Type[Any]: The processed class.
         """
-        klass = call_classmethod(klass, '_attach_klass') or klass
-        meta_path = getattr(klass, '__meta_path__', None)
+        cls = call_classmethod(cls, '_attach_klass') or cls
+        meta_path = getattr(cls, '__meta_path__', None)
         if meta_path:
-            classes[meta_path].append(klass)
-            _logger.debug(f"Attached class '{klass.__module__}.{klass.__name__}' to meta_path '{meta_path}'")
-        return klass
+            classes[meta_path].append(cls)
+            _logger.debug(f"Attached class '{cls.__module__}.{cls.__name__}' to meta_path '{meta_path}'")
+        return cls
 
-    @classmethod
-    def create_merged_class(cls, new_class_name: str, classes_list: List[Type[Any]], options: Optional[Dict[str, Any]] = None) -> Type[Any]:
+    @staticmethod
+    def create_merged_class(new_class_name: str, classes_list: List[Type[Any]], options: Optional[Dict[str, Any]] = None) -> Type[Any]:
         """
         Dynamically creates a new class by merging multiple classes.
         Args:
@@ -49,14 +49,8 @@ class Meta(type):
         options = options or {}
         if not classes_list:
             raise ValueError('classes_list must contain at least one class to merge.')
-        # Validate that all classes share a common base class
-        root_base = classes_list[0].__bases__[0]
-        if not all(root_base in cls.__mro__ for cls in classes_list):
-            raise TypeError('All classes must share the same root base class.')
         # Dynamically create the new class
-        new_class = type(new_class_name, tuple(classes_list), options)
-        _logger.debug(f"Created merged class '{new_class_name}' with bases: {[cls.__name__ for cls in classes_list]}")
-        return new_class
+        return type(new_class_name, tuple(classes_list), options)
 
     @classmethod
     def deduplicate_classes(cls, classes_list: List[Type[Any]]) -> List[Type[Any]]:
@@ -71,7 +65,7 @@ class Meta(type):
         for klass in reversed(classes_list):
             if not any(issubclass(other, klass) for other in classes_list if other != klass):
                 result.append(klass)
-        return [klass for klass in reversed(result)]
+        return result
 
 
 class Class:
@@ -133,7 +127,7 @@ def compile_classes():
         if not filtered_classes:
             continue
         # Generate the new class name and module path
-        new_class_name = "Super" + meta_path.split(".")[-1]
+        new_class_name = "_New" + meta_path.split(".")[-1]
         module_path = '.'.join(meta_path.split(".")[:-1])
         try:
             if len(filtered_classes) == 1:
