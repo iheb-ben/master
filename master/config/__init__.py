@@ -1,3 +1,4 @@
+from typing import Optional
 from master.tools.misc import temporairy_directory
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives import serialization
@@ -60,6 +61,8 @@ def rename_file_if_exists(file_path: Path):
 
 
 _logger = logging.get_logger(__name__)
+private_key_path: Optional[Path] = None
+public_key_path: Optional[Path] = None
 
 
 def configure_system():
@@ -74,6 +77,7 @@ def configure_system():
         sys.exit(1)
     _logger.info(f"Master Password: {parser.arguments.configuration['master_password']}")
     parser.arguments.save_configuration()
+    global private_key_path, public_key_path
     key_location = default_keys_location()
     private_key_path = key_location.joinpath('private_key.pem')
     public_key_path = key_location.joinpath('public_key.pem')
@@ -90,33 +94,70 @@ def configure_system():
     elif public_key_path.exists() and not private_key_path.exists():
         # Rename the public key and regenerate both keys
         rename_file_if_exists(public_key_path)
-        generate_keys(private_key_path, public_key_path)
+        generate_keys()
     elif not private_key_path.exists() and not public_key_path.exists():
         # Generate both keys
-        generate_keys(private_key_path, public_key_path)
+        generate_keys()
 
 
-def generate_keys(private_key_path: Path, public_key_path: Path):
+def generate_keys():
     """
     Generates a new RSA key pair and saves them to the specified paths.
-    Args:
-        private_key_path (Path): The file path to save the private key.
-        public_key_path (Path): The file path to save the public key.
     """
     # Generate private (secret) key
     private_key = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     # Generate public key from private key
     public_key = private_key.public_key()
     # Save private key to a PEM file
-    with open(str(private_key_path), 'wb') as private_file:
+    with open(private_key_path, 'wb') as private_file:
         private_file.write(private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.PKCS8,
             encryption_algorithm=serialization.NoEncryption()
         ))
     # Save public key to a PEM file
-    with open(str(public_key_path), 'wb') as public_file:
+    with open(public_key_path, 'wb') as public_file:
         public_file.write(public_key.public_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ))
+
+
+# noinspection PyBroadException
+def is_public_key_valid(public_key_content: bytes) -> bool:
+    """
+    Validates if a given public key corresponds to the private key in the provided path.
+    Args:
+        public_key_content (bytes): The public key content in PEM format.
+    Returns:
+        bool: True if the public key matches the private key, False otherwise.
+    """
+    try:
+        # Load private key
+        with open(private_key_path, 'rb') as priv_file:
+            private_key = serialization.load_pem_private_key(priv_file.read(), password=None)
+        # Load public key
+        public_key = serialization.load_pem_public_key(public_key_content)
+        # Test the key pair by signing and verifying a message
+        test_message = b"test message"
+        signature = private_key.sign(
+            test_message,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        # Verify the signature with the public key
+        public_key.verify(
+            signature,
+            test_message,
+            padding.PSS(
+                mgf=padding.MGF1(hashes.SHA256()),
+                salt_length=padding.PSS.MAX_LENGTH
+            ),
+            hashes.SHA256()
+        )
+        return True
+    except Exception:
+        return False
