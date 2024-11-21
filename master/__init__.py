@@ -15,7 +15,7 @@ def main():
     if config.parser.arguments.show_helper():
         exit(1)
     _logger.info(f"Master Password: {config.parser.arguments.configuration['master_password']}")
-    config.parser.arguments.save_configuration()
+    config.configure_system()
     core.db.main()
     core.module.main()
     core.api.compile_classes()

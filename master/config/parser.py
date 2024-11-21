@@ -1,7 +1,8 @@
-import inspect
+from master.config import version
 from master.tools.enums import Enum
 from typing import Optional, Union, Any, Type
 from master.tools.collection import LastIndexOrderedSet, OrderedSet
+from master.tools.ip import get_public_ip, get_private_ip, get_mac_address
 from master.tools.misc import generate_unique_string, find_available_port, temporairy_directory, has_method, call_method
 import platform
 import argparse
@@ -21,6 +22,12 @@ class Mode(Enum):
     PRODUCTION = 'production'
 
 
+class PipelineMode(Enum):
+    """Enum for defining ERP modes."""
+    NODE = 'node'
+    MANAGER = 'manager'
+
+
 class LoggerType(Enum):
     CRITICAL = 'CRITICAL'
     FATAL = 'FATAL'
@@ -34,7 +41,7 @@ class LoggerType(Enum):
 
 class ArgumentParser:
     """Handles parsing and storage of system settings and configuration for ERP."""
-    __slots__ = ('setting', 'configuration', 'stored')
+    __slots__ = ('signature', 'configuration', 'stored')
 
     def __init__(self, mode: Union[str, Mode], configuration: dict):
         """
@@ -49,14 +56,6 @@ class ArgumentParser:
         if not isinstance(mode, Mode):
             mode = Mode.from_value(mode.lower())
         self.stored = list()
-
-        # Basic system settings
-        self.setting = {
-            'system': platform.system(),
-            'python': platform.python_version(),
-            'mode': mode,
-        }
-
         # Default configuration settings
         self.configuration = configuration
         self.setdefault('master_configuration_name', 'configuration.json', str)
@@ -87,10 +86,29 @@ class ArgumentParser:
             self.setdefault('websocket_port', find_available_port(9002), int)
         self.setdefault('git', [], list)
         self.setdefault('addons', [], list)
-
         # Ensure unique sets for 'addons' and 'git' settings
         self.configuration['addons'] = LastIndexOrderedSet(self.configuration['addons'])
         self.configuration['git'] = OrderedSet(self.configuration['git'])
+        # Basic system settings
+        self.signature = {
+            'mode': self.read_parameter('node_type').value,
+            'os_name': platform.system(),
+            'os_release': platform.release(),
+            'os_version': platform.version(),
+            'os_architecture': platform.architecture()[0],
+            'public_ip': get_public_ip(),
+            'private_ip': get_private_ip(),
+            'mac_address': get_mac_address(),
+            'python': platform.python_version(),
+            'enviroment': mode.value,
+            'version': version,
+        }
+
+    def _parameter_node_type(self) -> PipelineMode:
+        if self.configuration['pipeline']:
+            return PipelineMode.MANAGER
+        else:
+            return PipelineMode.NODE
 
     def _parameter_default_db_name(self) -> str:
         if self.configuration['pipeline']:
