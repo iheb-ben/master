@@ -1,7 +1,7 @@
 from collections import defaultdict
 from typing import Optional, Any, Type, List, Dict, Callable
 from master.config.logging import get_logger
-from master.tools.misc import call_classmethod
+from master.tools.misc import call_classmethod, is_class_norm_compliant
 from functools import wraps
 import threading
 import sys
@@ -77,6 +77,8 @@ class Class:
         Automatically called when a new subclass is created. Registers the class with `Meta`.
         """
         super().__init_subclass__(**kwargs)
+        if not is_class_norm_compliant(cls.__name__):
+            raise ValueError(f'Class {cls.__module__}.{cls.__name__} is not norm compliant')
         Meta.attach_element(cls)
 
 
