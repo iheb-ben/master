@@ -5,14 +5,14 @@ from . import tools
 from . import config
 from . import core
 from . import orm
-from . import data
+from . import common
 
 
 def main():
     config.main()
     core.db.main()
     core.module.main()
-    data.main()
+    common.main()
     if config.arguments['pipeline']:
         core.pipeline.main()
     else:

@@ -1,6 +1,6 @@
-from collections import defaultdict
 from typing import Optional, Any, Type, List, Dict, Callable
 from master.config.logging import get_logger
+from master.core.data import ClassHolder
 from master.tools.misc import call_classmethod, is_class_norm_compliant
 from functools import wraps
 import threading
@@ -8,7 +8,7 @@ import sys
 
 _logger = get_logger(__name__)
 # Global registry for classes
-classes: Dict[str, List[Type[Any]]] = defaultdict(list)
+classes: Dict[str, ClassHolder] = {}
 
 
 class Meta(type):
@@ -28,6 +28,8 @@ class Meta(type):
         cls = call_classmethod(cls, '_attach_klass') or cls
         meta_path = getattr(cls, '__meta_path__', None)
         if meta_path:
+            if meta_path not in classes:
+                classes[meta_path] = ClassHolder()
             classes[meta_path].append(cls)
             _logger.debug(f'Attached class "{cls.__module__}.{cls.__name__}" to meta_path "{meta_path}"')
         return cls
@@ -53,7 +55,7 @@ class Meta(type):
         return type(new_class_name, tuple(classes_list), options)
 
     @classmethod
-    def deduplicate_classes(cls, classes_list: List[Type[Any]]) -> List[Type[Any]]:
+    def deduplicate_classes(cls, classes_list: ClassHolder) -> List[Type[Any]]:
         """
         Removes redundant base classes, keeping only the most derived ones.
         Args:
@@ -64,16 +66,12 @@ class Meta(type):
         from master.core.module.loader import installed_modules
         result = []
         check_from = []
-        if len(classes_list) > 1:
-            for module in reversed(installed_modules):
-                for klass in reversed(classes_list):
-                    if klass.__module__.startswith(f'master.addons.{module}'):
-                        check_from.append(klass)
-        for klass in classes_list:
-            if klass.__module__.startswith('master.core'):
+        for module in reversed(installed_modules):
+            for klass in reversed(classes_list.classes[module]):
                 check_from.append(klass)
+        check_from += classes_list.core
         for klass in check_from:
-            if not any(issubclass(other, klass) for other in classes_list if other != klass):
+            if len(check_from) == 1 or not any(issubclass(other, klass) for other in check_from if other != klass):
                 result.append(klass)
         return result
 

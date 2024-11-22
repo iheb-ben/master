@@ -7,7 +7,7 @@ from master.config.logging import get_logger
 from master.tools.collection import OrderedSet
 from master.tools.enums import Enum
 from master.core.db import PostgresManager
-from master.data import git_repo_manager
+from master.common import git_repo_manager
 
 _logger = get_logger(__name__)
 

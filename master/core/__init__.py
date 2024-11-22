@@ -1,4 +1,5 @@
 from typing import Optional, Type
+from . import data
 from . import api
 from . import db
 from . import orm
