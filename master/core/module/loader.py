@@ -12,6 +12,7 @@ import psycopg2
 import sys
 
 _logger = get_logger(__name__)
+installed_modules: List[str] = []
 
 
 def check_condition(configuration: Configuration) -> bool:
@@ -28,15 +29,13 @@ def check_condition(configuration: Configuration) -> bool:
     return False
 
 
-def default_modules(configurations: Iterable[Configuration]) -> List[str]:
+def default_modules(configurations: Iterable[Configuration]):
     """
     Retrieves the list of default modules from the database or fallback to local configurations.
     Args:
         configurations (Iterable[Configuration]): A list of module configurations.
-    Returns:
-        List[str]: A list of default module names.
     """
-    installed_modules: List[str] = []
+    global installed_modules
     try:
         manager = PostgresManager()
         with manager.admin_connection().cursor() as cursor:
@@ -49,7 +48,6 @@ def default_modules(configurations: Iterable[Configuration]) -> List[str]:
         if not installed_modules:
             _logger.warning("Falling back to local configurations for default modules.")
             installed_modules = [c.name for c in configurations if check_condition(c)]
-    return installed_modules
 
 
 def import_module(name: str, configurations: OrderedConfiguration):

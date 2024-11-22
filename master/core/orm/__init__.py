@@ -1,4 +1,4 @@
-from typing import Optional, Type, Union
+from typing import Optional, Type, Union, Dict
 import psycopg2
 from master.config.logging import get_logger
 from master.config import arguments

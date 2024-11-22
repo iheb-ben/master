@@ -135,5 +135,6 @@ def main():
     if not configurations:
         _logger.error('No configurations found. Shutting down.')
         sys.exit(-1)
-    for name in loader.default_modules(configurations.values()):
+    loader.default_modules(configurations.values())
+    for name in loader.installed_modules:
         loader.import_module(name, configurations)

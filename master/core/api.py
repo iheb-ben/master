@@ -61,8 +61,18 @@ class Meta(type):
         Returns:
             List[Type[Any]]: A filtered list of classes.
         """
+        from master.core.module.loader import installed_modules
         result = []
-        for klass in reversed(classes_list):
+        check_from = []
+        if len(classes_list) > 1:
+            for module in reversed(installed_modules):
+                for klass in reversed(classes_list):
+                    if klass.__module__.startswith(f'master.addons.{module}'):
+                        check_from.append(klass)
+        for klass in classes_list:
+            if klass.__module__.startswith('master.core'):
+                check_from.append(klass)
+        for klass in check_from:
             if not any(issubclass(other, klass) for other in classes_list if other != klass):
                 result.append(klass)
         return result
