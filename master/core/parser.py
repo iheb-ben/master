@@ -63,11 +63,12 @@ class ArgumentsDict(TypedDict, total=False):
     db_mongo_user: str
     db_mongo_password: str
     # Computed settings
+    logging_level: int
     node_type: str
     help: bool
 
 
-_computed_fields = ['help', 'node_type']
+_computed_fields = ['help', 'node_type', 'logging_level']
 
 
 def load_configuration(path: Path) -> ArgumentsDict:
@@ -86,9 +87,8 @@ def load_configuration(path: Path) -> ArgumentsDict:
 def save_configuration(path: Path, config: ArgumentsDict):
     """Saves arguments to a JSON configuration file."""
     try:
-        ignore_keys = ['help']
         with open(path, 'w') as file:
-            json.dump({k: v for k, v in config.items() if k not in ignore_keys}, file, indent=4)
+            json.dump({k: v for k, v in config.items() if k not in _computed_fields}, file, indent=4)
     except OSError as e:
         _logger.error(f"Failed to save configuration to {path}: {e}")
 
@@ -149,7 +149,7 @@ class ParsedArguments:
             self.arguments['node_type'] = self.arguments.get('pipeline_mode')
         else:
             self.arguments['node_type'] = 'basic'
-        self.arguments['log_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
+        self.arguments['logging_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
         self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
 
     @classproperty
@@ -159,7 +159,7 @@ class ParsedArguments:
 
     def save(self):
         """Saves current arguments to the default JSON configuration file."""
-        save_configuration(self._path, {k: i for k, i in self.arguments.items() if k not in _computed_fields})
+        save_configuration(self._path, self.arguments)
 
 
 class ArgumentParser:
