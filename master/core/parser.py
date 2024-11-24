@@ -113,6 +113,10 @@ class ParsedArguments:
             self._merge_configuration(config)
         self._merge_configuration(load_configuration(self._path))
 
+    def allow(self, key: str):
+        if key in self._ignore:
+            self._ignore.remove(key)
+
     def _merge_configuration(self, config: ArgumentsDict):
         """Merge a configuration dictionary into the arguments."""
         for key, value in config.items():
@@ -185,7 +189,7 @@ class ArgumentParser:
         self._parser.add_argument('--mode', choices=[e.value for e in Mode], default=Mode.STAGING.value, help='ERP mode')
         self._parser.add_argument('--configuration', type=str, help='Path to ERP configuration file in JSON format')
         self._parser.add_argument('--master-password', type=str, help='Master password')
-        self._parser.add_argument('--directory', type=str, help='Path to ERP directory folder')
+        self._parser.add_argument('--directory', type=str, default=str(temporairy_directory()), help='Path to ERP directory folder')
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
@@ -225,14 +229,10 @@ class ArgumentParser:
 
 def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace) -> ParsedArguments:
     """ Custom logic to manipulate certain values """
+    parsed.allow('master_password')
     if not namespace.master_password:
         if not parsed.arguments.get('master_password'):
             namespace.master_password = generate_unique_string(20)
         else:
             namespace.master_password = parsed.arguments['master_password']
-    if not namespace.directory:
-        if not parsed.arguments.get('directory'):
-            namespace.directory = str(temporairy_directory())
-        else:
-            namespace.directory = parsed.arguments['directory']
     return parsed
