@@ -46,14 +46,12 @@ class LoggerType(str, Enum):
 
 class ArgumentsDict(TypedDict, total=False):
     """TypedDict for all configurable arguments."""
-    help: bool
     mode: str
     log_file: str
     log_level: str
     master_password: str
     pipeline: bool
     pipeline_mode: str
-    node_type: Optional[str]
     db_name: str
     db_host: str
     db_port: int
@@ -64,6 +62,12 @@ class ArgumentsDict(TypedDict, total=False):
     db_mongo_port: int
     db_mongo_user: str
     db_mongo_password: str
+    # Computed settings
+    node_type: str
+    help: bool
+
+
+_computed_fields = ['help', 'node_type']
 
 
 def load_configuration(path: Path) -> ArgumentsDict:
@@ -97,7 +101,7 @@ class ParsedArguments:
     __slots__ = ('arguments', '_path', '_ignore')
 
     def __init__(self, configuration_path: Optional[str] = None):
-        self._ignore: List[str] = []
+        self._ignore: List[str] = _computed_fields.copy()
         self._path = temporairy_directory().joinpath('configuration.json')
         self.arguments: ArgumentsDict = {}
 
@@ -107,9 +111,6 @@ class ParsedArguments:
             self._ignore.extend([name for name in config.keys() if name in self.arguments_names])
             self._merge_configuration(config)
         self._merge_configuration(load_configuration(self._path))
-
-        # Add 'help' flag
-        self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
 
     def _merge_configuration(self, config: ArgumentsDict):
         """Merge a configuration dictionary into the arguments."""
@@ -137,6 +138,11 @@ class ParsedArguments:
             if port and not (1 <= int(port) <= 65535):
                 raise ValueError(f'Invalid port for "{port_key}": {port}')
 
+        # Validate mandatory values
+        for key in ['master_password']:
+            if not self.arguments.get(key):
+                raise ValueError(f'Missing required parameter "{key}"')
+
     def compute(self):
         """Computes derived settings."""
         if self.arguments.get('pipeline'):
@@ -144,6 +150,7 @@ class ParsedArguments:
         else:
             self.arguments['node_type'] = 'basic'
         self.arguments['log_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
+        self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
 
     @classproperty
     def arguments_names(cls) -> List[str]:
@@ -152,7 +159,7 @@ class ParsedArguments:
 
     def save(self):
         """Saves current arguments to the default JSON configuration file."""
-        save_configuration(self._path, self.arguments)
+        save_configuration(self._path, {k: i for k, i in self.arguments.items() if k not in _computed_fields})
 
 
 class ArgumentParser:
@@ -196,6 +203,11 @@ class ArgumentParser:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
         parsed_arguments = ParsedArguments(namespace.configuration)
+        if not namespace.master_password:
+            if not parsed_arguments.arguments['master_password']:
+                namespace.master_password = generate_unique_string(20)
+            else:
+                namespace.master_password = parsed_arguments.arguments['master_password']
         parsed_arguments.update_configuration(vars(namespace))
         parsed_arguments.check()
         parsed_arguments.save()
