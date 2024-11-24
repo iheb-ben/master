@@ -19,4 +19,5 @@ signature = {
 }
 
 from . import logging
+from . import pem
 from . import registry

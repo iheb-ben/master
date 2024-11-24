@@ -50,6 +50,7 @@ class ArgumentsDict(TypedDict, total=False):
     log_file: str
     log_level: str
     master_password: str
+    directory: str
     pipeline: bool
     pipeline_mode: str
     db_name: str
@@ -131,6 +132,10 @@ class ParsedArguments:
             path = self.arguments.get(path_key)
             if path and not Path(str(path)).is_file():
                 raise ValueError(f'Invalid file path for "{path_key}": {path}')
+        for path_key in ['directory']:
+            path = self.arguments.get(path_key)
+            if path and not Path(str(path)).is_dir():
+                raise ValueError(f'Invalid directory path for "{path_key}": {path}')
 
         # Validate port ranges
         for port_key in ['port', 'db_port', 'db_mongo_port']:
@@ -177,6 +182,7 @@ class ArgumentParser:
         self._parser.add_argument('--mode', choices=[e.value for e in Mode], default=Mode.STAGING.value, help='ERP mode')
         self._parser.add_argument('--configuration', type=str, help='Path to ERP configuration file in JSON format')
         self._parser.add_argument('--master-password', type=str, help='Master password')
+        self._parser.add_argument('--directory', type=str, help='Path to ERP directory folder')
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
@@ -203,11 +209,17 @@ class ArgumentParser:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
         parsed_arguments = ParsedArguments(namespace.configuration)
+        # Custom logic to manipulate & update certain values
         if not namespace.master_password:
-            if not parsed_arguments.arguments['master_password']:
+            if not parsed_arguments.arguments.get('master_password'):
                 namespace.master_password = generate_unique_string(20)
             else:
                 namespace.master_password = parsed_arguments.arguments['master_password']
+        if not namespace.directory:
+            if not parsed_arguments.arguments.get('directory'):
+                namespace.directory = str(temporairy_directory())
+            else:
+                namespace.directory = parsed_arguments.arguments['directory']
         parsed_arguments.update_configuration(vars(namespace))
         parsed_arguments.check()
         parsed_arguments.save()

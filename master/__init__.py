@@ -10,3 +10,4 @@ def main():
     if core.arguments['help']:
         core.parser.ArgumentParser().help()
         sys.exit(1)
+    core.pem.configure()
