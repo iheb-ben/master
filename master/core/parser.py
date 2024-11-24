@@ -184,7 +184,7 @@ class ArgumentParser:
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')
-        pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode], default=PipelineMode.NODE.value, help='Pipeline mode')
+        pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode], default=PipelineMode.MANAGER.value, help='Pipeline mode')
 
         # Database settings
         db_group = self._parser.add_argument_group('Database Configuration', 'Database-related settings')
