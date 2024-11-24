@@ -24,9 +24,9 @@ class ModuleClassRegistry:
         """
         module_name = self._extract_module_name(cls)
         if module_name == '_':
-            self.core_classes.append(cls)
+            self.core_classes.insert(0, cls)
         else:
-            self.module_classes[module_name].append(cls)
+            self.module_classes[module_name].insert(0, cls)
 
     @staticmethod
     def _extract_module_name(cls: Type[Any]) -> str:
@@ -71,9 +71,10 @@ class ClassManager:
         try:
             return super().__getattribute__(item)
         except AttributeError:
-            for key in self._classes:
-                if key.endswith('.' + item):
-                    return self[key]
+            if hasattr(self, '_classes'):
+                for key in self._classes:
+                    if key.endswith('.' + item):
+                        return self[key]
             raise
 
     @staticmethod
@@ -106,7 +107,7 @@ class ClassManager:
         """
         result, all_classes = [], []
         for module in modules:
-            all_classes.extend(reversed(registry.module_classes[module]))
+            all_classes.extend(registry.module_classes[module])
         all_classes += registry.core_classes
         for cls in all_classes:
             if not any(issubclass(other, cls) for other in all_classes if other != cls):
