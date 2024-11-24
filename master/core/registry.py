@@ -69,12 +69,11 @@ class ClassManager:
 
     def __getattribute__(self, item):
         try:
-            attribute = super().__getattribute__(item)
+            return super().__getattribute__(item)
         except AttributeError:
-            if hasattr(self, '_classes'):
-                for key in self._classes:
-                    if key.endswith(item):
-                        return self[key]
+            for key in self._classes:
+                if key.endswith('.' + item):
+                    return self[key]
             raise
 
     @staticmethod
