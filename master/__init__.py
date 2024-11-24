@@ -1,19 +1,12 @@
 import traceback
-from . import addons
-from . import exceptions
+import sys
 from . import tools
-from . import config
+from . import addons
+from . import api
 from . import core
-from . import orm
-from . import common
 
 
 def main():
-    config.main()
-    core.db.main()
-    core.module.main()
-    common.main()
-    if config.arguments['pipeline']:
-        core.pipeline.main()
-    else:
-        core.server.main()
+    if core.arguments['help']:
+        core.parser.ArgumentParser().help()
+        sys.exit(1)

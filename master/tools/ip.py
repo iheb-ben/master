@@ -36,9 +36,11 @@ def get_mac_address() -> str:
     return ':'.join(f"{(mac >> ele) & 0xff:02x}" for ele in range(0, 8 * 6, 8))[::-1]
 
 
-def get_private_ip() -> str:
+def get_private_ip(raise_error: bool = True) -> Optional[str]:
     """
     Fetches the private IP address of the machine.
+    Args:
+        raise_error (bool): If true trigger error in case request failed
     Returns:
         str: The private IP address of the machine.
     Raises:
@@ -49,4 +51,6 @@ def get_private_ip() -> str:
         private_ip = socket.gethostbyname(hostname)
         return private_ip
     except socket.error as e:
-        raise SystemError(f'Error fetching private IP: {e}')
+        if raise_error:
+            raise SystemError(f'Error fetching private IP: {e}')
+        return None
