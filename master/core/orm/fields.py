@@ -1,8 +1,8 @@
 from typing import Any, Optional
-from master.core.api import Class
+from master.core.api import BaseClass
 
 
-class Field(Class):
+class Field(BaseClass):
     __slots__ = ('label', 'groups', 'unique', 'required', 'default')
 
     def __init__(self, label=None, groups=None, required=False, unique=False, default=None):

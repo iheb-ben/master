@@ -12,7 +12,12 @@ import psycopg2
 import sys
 
 _logger = get_logger(__name__)
+pending_update_modules: List[str] = []
 installed_modules: List[str] = []
+
+
+def read_all():
+    return installed_modules + pending_update_modules
 
 
 def check_condition(configuration: Configuration) -> bool:
@@ -29,39 +34,48 @@ def check_condition(configuration: Configuration) -> bool:
     return False
 
 
-def default_modules(configurations: Iterable[Configuration]):
+def reorder_module_names(modules: List[str]):
+    from master.core.module import configurations
+    return [name for name in configurations if name in modules]
+
+
+def default_modules():
     """
     Retrieves the list of default modules from the database or fallback to local configurations.
-    Args:
-        configurations (Iterable[Configuration]): A list of module configurations.
     """
-    global installed_modules
+    from master.core.module import configurations
+    global installed_modules, pending_update_modules
     try:
         manager = PostgresManager()
         with manager.admin_connection().cursor() as cursor:
             cursor.execute("SELECT key FROM module_module WHERE state='installed';")
             installed_modules = [row[0] for row in cursor.fetchall()]
+            cursor.execute("SELECT key FROM module_module WHERE state='to_update';")
+            pending_update_modules = [row[0] for row in cursor.fetchall()]
             _logger.debug(f"Retrieved installed modules from the database: {installed_modules}")
     except (psycopg2.Error, DatabaseSessionError) as e:
         _logger.warning(f"Could not retrieve default modules from database: {clean_end_of_line(str(e))}")
     finally:
         if not installed_modules:
             _logger.warning("Falling back to local configurations for default modules.")
-            installed_modules = [c.name for c in configurations if check_condition(c)]
+            installed_modules = [name for name in configurations if check_condition(configurations[name])]
+        else:
+            installed_modules = reorder_module_names(installed_modules)
+            pending_update_modules = reorder_module_names(pending_update_modules)
 
 
-def import_module(name: str, configurations: OrderedConfiguration):
+def import_module(name: str):
     """
     Dynamically imports a module and its dependencies.
     Args:
         name (str): The name of the module to import.
-        configurations (OrderedConfiguration): The ordered configuration of all modules.
     """
+    from master.core.module import configurations
     if hasattr(addons, name):
         return
     # Import dependencies recursively
     for dependency in configurations[name].depends:
-        import_module(dependency, configurations)
+        import_module(dependency)
     try:
         module_path = configurations[name].path / '__init__.py'
         spec = spec_from_file_location(f"{addons.__name__}.{name}", module_path)

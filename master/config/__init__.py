@@ -21,6 +21,9 @@ signature = {
     'python': platform.python_version(),
     'version': 1,
 }
+start = True
+loading = True
+waiting = True
 
 from . import logging
 

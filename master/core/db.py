@@ -7,7 +7,7 @@ import psycopg2
 from psycopg2 import sql
 from master.config.logging import get_logger
 from master.config import arguments
-from master.core.api import Class
+from master.core.api import BaseClass
 from master.exceptions.db import DatabaseAccessError, DatabaseSessionError, DatabaseRoleError
 
 ROLE_COLLECTION_NAME = "user_roles"  # Collection for storing user roles in MongoDB
@@ -60,7 +60,7 @@ class Manager(ABC):
         pass
 
 
-class PostgresManager(Class, Manager):
+class PostgresManager(BaseClass, Manager):
     __meta_path__ = 'master.core.PostgresManager'
     __slots__ = ('database_name', 'connections', 'required')
 
@@ -204,7 +204,7 @@ class PostgresManager(Class, Manager):
             connection.close()
 
 
-class MongoDBManager(Class, Manager):
+class MongoDBManager(BaseClass, Manager):
     __meta_path__ = 'master.core.MongoDBManager'
     __slots__ = ('database_name', 'connections', 'required')
 

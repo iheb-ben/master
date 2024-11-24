@@ -1,17 +1,17 @@
-from typing import Optional, Type, Union, Dict
-import psycopg2
+from collections import defaultdict
+from typing import Optional, Type, Union, Dict, List
 from master.config.logging import get_logger
 from master.config import arguments
-from master.core.api import Class
+from master.core.api import BaseClass
+from master.tools.collection import OrderedSet
+import psycopg2
 from . import models
 from . import fields
 
-AnyModel = Type[models.Model | models.TransientModel | models.AbstractModel]
-TableType = Type[models.TransientModel | models.Model]
 _logger = get_logger(__name__)
 
 
-class DBStructureManager(Class):
+class DBStructureManager(BaseClass):
     __meta_path__ = 'master.core.DBStructureManager'
     __slots__ = ('connection', 'grouped')
 
@@ -52,7 +52,7 @@ class DBStructureManager(Class):
                     'data_type': data_type,
                 })
 
-    def define_table(self, Table: TableType):
+    def define_table(self, Table: Type[models.TransientModel | models.Model]):
         """
         Define a table dynamically based on ORM class.
         :param Table: ORM Class.
@@ -91,10 +91,3 @@ class DBStructureManager(Class):
                     'data_type': data_type,
                 })
         return True
-
-
-registered_models: Dict[str, AnyModel] = {}
-
-
-def build_models():
-    print(registered_models)
