@@ -32,17 +32,19 @@ def configure_logging():
     """
     log_file: Optional[str] = arguments.get('log_file', None)
     logging_level = arguments.get('logging_level', logging.INFO)  # Default to INFO level
-
     try:
         if log_file and not log_file.isspace():
             add_handler(logging.FileHandler(log_file))
         else:
             add_handler(logging.StreamHandler())
-
-        # Apply global logging configuration
-        logging.basicConfig(level=logging_level, format=log_format, handlers=handlers)
+        root_logger = logging.getLogger()  # The root logger
+        root_logger.setLevel(logging_level)
+        for handler in root_logger.handlers:
+            handler.setLevel(logging_level)
+            handler.setFormatter(logging.Formatter(log_format))
+        for handler in handlers:
+            root_logger.addHandler(handler)
     except Exception as e:
-        # Gracefully handle logging configuration issues
         logging.basicConfig(level=logging.ERROR)
         logging.error(f"Failed to configure logging: {e}")
 
