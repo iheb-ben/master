@@ -154,7 +154,10 @@ class ParsedArguments:
             self.arguments['node_type'] = self.arguments.get('pipeline_mode')
         else:
             self.arguments['node_type'] = 'basic'
-        self.arguments['logging_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
+        if self.arguments['mode'] == Mode.STAGING.value:
+            self.arguments['logging_level'] = logging.DEBUG
+        else:
+            self.arguments['logging_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
         self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
 
     @classproperty
@@ -208,18 +211,7 @@ class ArgumentParser:
     def parse(self) -> ArgumentsDict:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
-        parsed_arguments = ParsedArguments(namespace.configuration)
-        # Custom logic to manipulate & update certain values
-        if not namespace.master_password:
-            if not parsed_arguments.arguments.get('master_password'):
-                namespace.master_password = generate_unique_string(20)
-            else:
-                namespace.master_password = parsed_arguments.arguments['master_password']
-        if not namespace.directory:
-            if not parsed_arguments.arguments.get('directory'):
-                namespace.directory = str(temporairy_directory())
-            else:
-                namespace.directory = parsed_arguments.arguments['directory']
+        parsed_arguments = _customize_namespace(ParsedArguments(namespace.configuration), namespace)
         parsed_arguments.update_configuration(vars(namespace))
         parsed_arguments.check()
         parsed_arguments.save()
@@ -229,3 +221,18 @@ class ArgumentParser:
     def help(self):
         """Displays help information."""
         self._parser.print_help()
+
+
+def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace) -> ParsedArguments:
+    """ Custom logic to manipulate certain values """
+    if not namespace.master_password:
+        if not parsed.arguments.get('master_password'):
+            namespace.master_password = generate_unique_string(20)
+        else:
+            namespace.master_password = parsed.arguments['master_password']
+    if not namespace.directory:
+        if not parsed.arguments.get('directory'):
+            namespace.directory = str(temporairy_directory())
+        else:
+            namespace.directory = parsed.arguments['directory']
+    return parsed
