@@ -80,11 +80,11 @@ class lazy_classproperty(classproperty):
     def __get__(self, instance: Optional[object], owner: Type[object]) -> Any:
         func_name = self.__read_name(owner)
         with self._lock:
-            if func_name not in self.__class__._register:
-                self.__class__._register[func_name] = super().__get__(instance, owner)
-            return self.__class__._register[func_name]
+            if func_name not in self._register:
+                self._register[func_name] = super().__get__(instance, owner)
+            return self._register[func_name]
 
     def __set__(self, instance: object, value: Any) -> None:
         func_name = self.__read_name(instance.__class__)
         with self._lock:
-            self.__class__._register[func_name] = value
+            self._register[func_name] = value
