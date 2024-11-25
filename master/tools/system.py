@@ -1,4 +1,21 @@
 import socket
+import signal
+import sys
+import time
+
+
+def wait_for_signal():
+    """
+    A cross-platform way to wait for signals indefinitely.
+    On Unix-like systems, uses signal.pause().
+    On other systems, simulates similar behavior with an infinite sleep loop.
+    """
+    if hasattr(signal, 'pause'):
+        signal.pause()
+    else:
+        while True:
+            time.sleep(1)
+
 
 already_checked = set()
 

@@ -3,9 +3,8 @@ import sys
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Optional, TypedDict, List, Set
+from typing import Dict, Optional, TypedDict, List, Set, Callable
 
-# Custom tools
 from master.api import classproperty
 from master.tools.enums import Enum
 from master.tools.collection import is_complex_iterable
@@ -50,6 +49,8 @@ class ArgumentsDict(TypedDict, total=False):
     log_file: str
     log_level: str
     master_password: str
+    jwt_secret: str
+    port: int
     directory: str
     pipeline: bool
     pipeline_mode: str
@@ -193,6 +194,7 @@ class ArgumentParser:
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
+        self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
 
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
@@ -230,9 +232,16 @@ class ArgumentParser:
 def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace) -> ParsedArguments:
     """ Custom logic to manipulate certain values """
     parsed.allow('master_password')
+    parsed.allow('jwt_secret')
+    generator: Callable = lambda length: generate_unique_string(length, "\"\\/*<>'`^")
     if not namespace.master_password:
         if not parsed.arguments.get('master_password'):
-            namespace.master_password = generate_unique_string(20)
+            namespace.master_password = generator(20)
         else:
             namespace.master_password = parsed.arguments['master_password']
+    if not namespace.jwt_secret:
+        if not parsed.arguments.get('jwt_secret'):
+            namespace.jwt_secret = generator(255)
+        else:
+            namespace.jwt_secret = parsed.arguments['jwt_secret']
     return parsed

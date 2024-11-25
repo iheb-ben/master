@@ -20,6 +20,7 @@ signature = {
 
 from . import logging
 from . import pem
+from . import jwt
 from . import registry
 from . import git
 from . import modules
