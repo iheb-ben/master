@@ -15,7 +15,6 @@ def print_details():
         'node_type': 'Node Type',
         'os_name': 'OS Name',
         'os_version': 'OS Version',
-        'os_architecture': 'OS Architecture',
         'version': 'Version',
     }.items():
         _logger.info(f'{name}: {core.signature[key]}')
