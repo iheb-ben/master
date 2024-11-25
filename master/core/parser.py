@@ -69,7 +69,7 @@ class ArgumentsDict(TypedDict, total=False):
     help: bool
 
 
-_computed_fields = ['help', 'node_type', 'logging_level']
+_computed_fields = ['help', 'node_type', 'logging_level', 'configuration']
 
 
 def load_configuration(path: Path) -> ArgumentsDict:
