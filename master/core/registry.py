@@ -130,8 +130,24 @@ class BaseClass(object):
     # noinspection PyMethodParameters
     @lazy_classproperty
     def __meta__(cls) -> Optional[str]:
-        index = list(cls.__mro__).index(BaseClass) - 1
-        if index < 0:
-            return None
-        mro = cls.__mro__[index]
-        return f'{mro.__module__}.{mro.__name__}'
+        return first_mro_before(cls, BaseClass)
+
+
+def first_mro_before(cls: Any, element: Any) -> Optional[str]:
+    """
+    Finds the first class in the MRO (method resolution order) before the specified element.
+    Args:
+        cls (Any): The class whose MRO is being inspected.
+        element (Any): The class to find in the MRO.
+    Returns:
+        Optional[str]: The fully qualified name of the first class in the MRO before the specified element,
+                       or None if no such class exists.
+    """
+    try:
+        index = list(cls.__mro__).index(element) - 1
+    except ValueError:
+        return None
+    if not (0 <= index < len(cls.__mro__)):
+        return None
+    mro = cls.__mro__[index]
+    return f'{mro.__module__}.{mro.__name__}'

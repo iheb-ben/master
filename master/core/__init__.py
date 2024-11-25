@@ -21,3 +21,6 @@ signature = {
 from . import logging
 from . import pem
 from . import registry
+from . import git
+from . import modules
+from . import orm
