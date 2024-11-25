@@ -87,7 +87,9 @@ class ClassManager:
             if cls.__meta__ not in ClassManager._registry:
                 ClassManager._registry[cls.__meta__] = ModuleClassRegistry()
             ClassManager._registry[cls.__meta__].register_class(cls)
-            _logger.debug(f'Registered class "{cls.__module__}.{cls.__name__}" under meta_path "{cls.__meta__}"')
+            meta = f'{cls.__module__}.{cls.__name__}'
+            if meta != cls.__meta__:
+                _logger.debug(f'Registered class "{meta}" under meta_path "{cls.__meta__}"')
             call_classmethod(cls, '_after_register')
         return cls
 
