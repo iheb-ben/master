@@ -54,6 +54,7 @@ class ArgumentsDict(TypedDict, total=False):
     directory: str
     pipeline: bool
     pipeline_mode: str
+    pipeline_port: int
     db_name: str
     db_host: str
     db_port: int
@@ -143,7 +144,10 @@ class ParsedArguments:
                 raise ValueError(f'Invalid directory path for "{path_key}": {path}')
 
         # Validate port ranges
-        for port_key in ['port', 'db_port', 'db_mongo_port']:
+        validate_ports = ['port', 'db_port', 'db_mongo_port']
+        if self.arguments['pipeline'] and self.arguments['pipeline_mode'] == PipelineMode.NODE.value:
+            validate_ports.append('pipeline_port')
+        for port_key in validate_ports:
             port = self.arguments.get(port_key)
             if port and not (1 <= int(port) <= 65535):
                 raise ValueError(f'Invalid port for "{port_key}": {port}')
@@ -194,6 +198,7 @@ class ArgumentParser:
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
+        self._parser.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
 
         # Pipeline settings

@@ -26,7 +26,7 @@ def validate_jwt(token: str, algorithms: Optional[list[str]] = None) -> dict:
     """
     Validates and decodes a JWT.
     :param token: The JWT to validate.
-    :param algorithms: List of allowed algorithms.
+    :param algorithms: List of allowed algorithms (default is HS256).
     :return: Decoded payload if valid.
     :raises: jwt.ExpiredSignatureError, jwt.InvalidTokenError
     """

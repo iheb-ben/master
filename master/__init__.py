@@ -35,9 +35,13 @@ def main():
         core.parser.ArgumentParser().help()
         sys.exit(1)
     core.pem.configure()
-    if core.arguments['pipeline'] and core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
-        global git_manager
-        git_manager = core.git.GitRepoManager()
+    if core.arguments['pipeline']:
+        if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
+            global git_manager
+            git_manager = core.git.GitRepoManager()
+        elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
+            # TODO: trigger a small server for managing the ERP instance, use pipeline_port
+            pass
     signal.signal(signal.SIGINT, lambda sig, frame: destroy())
     signal.signal(signal.SIGTERM, lambda sig, frame: destroy())
     print_details()
