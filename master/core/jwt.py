@@ -1,6 +1,6 @@
 from datetime import datetime, timedelta
 from dateutils import relativedelta
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import jwt
 
 from master.core import arguments
@@ -22,7 +22,7 @@ def generate_jwt(payload: dict, expiration_minutes: int = 15, algorithm: Optiona
     return jwt.encode(payload_copy, arguments['jwt_secret'], algorithm or 'HS256')
 
 
-def validate_jwt(token: str, algorithms: Optional[list[str]] = None) -> dict:
+def validate_jwt(token: str, algorithms: Optional[List[str]] = None) -> Dict[str, Any]:
     """
     Validates and decodes a JWT.
     :param token: The JWT to validate.
