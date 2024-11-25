@@ -3,7 +3,7 @@ import sys
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Optional, TypedDict, List
+from typing import Dict, Optional, TypedDict, List, Set
 
 # Custom tools
 from master.api import classproperty
@@ -69,7 +69,7 @@ class ArgumentsDict(TypedDict, total=False):
     help: bool
 
 
-_computed_fields = ['help', 'node_type', 'logging_level', 'configuration']
+_unstorable_fields: Set[str] = {'help', 'node_type', 'logging_level', 'configuration'}
 
 
 def load_configuration(path: Path) -> ArgumentsDict:
@@ -89,7 +89,7 @@ def save_configuration(path: Path, config: ArgumentsDict):
     """Saves arguments to a JSON configuration file."""
     try:
         with open(path, 'w') as file:
-            json.dump({k: v for k, v in config.items() if k not in _computed_fields}, file, indent=4)
+            json.dump({k: v for k, v in config.items() if k not in _unstorable_fields}, file, indent=4)
     except OSError as e:
         _logger.error(f"Failed to save configuration to {path}: {e}")
 
@@ -102,14 +102,14 @@ class ParsedArguments:
     __slots__ = ('arguments', '_path', '_ignore')
 
     def __init__(self, configuration_path: Optional[str] = None):
-        self._ignore: List[str] = _computed_fields.copy()
+        self._ignore: Set[str] = _unstorable_fields.copy()
         self._path = temporairy_directory().joinpath('configuration.json')
         self.arguments: ArgumentsDict = {}
 
         # Load configurations from JSON file or temporary directory
         if configuration_path:
             config = load_configuration(Path(configuration_path))
-            self._ignore.extend([name for name in config.keys() if name in self.arguments_names])
+            self._ignore.update(config.keys())
             self._merge_configuration(config)
         self._merge_configuration(load_configuration(self._path))
 
@@ -125,9 +125,9 @@ class ParsedArguments:
 
     def update_configuration(self, config: ArgumentsDict):
         """Updates configuration arguments dynamically."""
-        for key, value in config.items():
-            if key in self.arguments_names and key not in self._ignore:
-                self.arguments[key] = value
+        for key in self.arguments_names:
+            if key in config and key not in self._ignore:
+                self.arguments[key] = config[key]
 
     def check(self):
         """Validates certain arguments for correctness."""
