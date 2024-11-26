@@ -91,6 +91,8 @@ class ClassManager:
             if meta != cls.__meta__:
                 _logger.debug(f'Registered class "{meta}" under meta_path "{cls.__meta__}"')
             call_classmethod(cls, '_after_register')
+        else:
+            call_classmethod(cls, '_ignore_register')
         return cls
 
     @staticmethod

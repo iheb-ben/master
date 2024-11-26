@@ -68,7 +68,7 @@ class lazy_classproperty(classproperty):
     """A lazy, cached class-level property."""
     __slots__ = ('__func__', '_name')
     _register: Dict[str, Any] = {}
-    _lock = threading.Lock()
+    _lock = threading.RLock()
 
     def __init__(self, func: Callable):
         super().__init__(func)
