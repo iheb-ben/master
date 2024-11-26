@@ -55,6 +55,7 @@ class ArgumentsDict(TypedDict, total=False):
     pipeline: bool
     pipeline_mode: str
     pipeline_port: int
+    pipeline_origin: str | None
     db_name: str
     db_host: str
     db_port: int
@@ -198,13 +199,14 @@ class ArgumentParser:
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
-        self._parser.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
 
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')
         pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode], default=PipelineMode.MANAGER.value, help='Pipeline mode')
+        pipeline_group.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
+        pipeline_group.add_argument('--pipeline-origin', type=str, default=None, help='Allow origins (default localhost)')
 
         # Database settings
         db_group = self._parser.add_argument_group('Database Configuration', 'Database-related settings')
