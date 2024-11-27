@@ -1,28 +1,5 @@
-from typing import TypeVar, Generic, Callable, Any, Type, Dict, Optional
+from typing import Callable, Any, Type, Dict, Optional
 import threading
-
-T = TypeVar('T')  # Generic type for the wrapped value
-
-
-class ThreadSafeValue(Generic[T]):
-    """
-    A thread-safe wrapper for any value. Provides safe get and set operations.
-    """
-    def __init__(self, initial_value: T = None):
-        self._value = initial_value
-        self._lock = threading.Lock()
-
-    def get(self) -> T:
-        with self._lock:
-            return self._value
-
-    def set(self, new_value: T):
-        with self._lock:
-            self._value = new_value
-
-    def update(self, updater: Callable):
-        with self._lock:
-            self._value = updater(self._value)
 
 
 # noinspection PyPep8Naming

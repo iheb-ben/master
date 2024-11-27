@@ -1,19 +1,31 @@
 import signal
 import traceback
 import sys
+import logging
 from typing import Optional
 
-from . import tools
 from . import addons
+from . import tools
 from . import api
 from . import core
-import logging
 
 _logger = logging.getLogger(__name__)
-git_manager: Optional[core.git.GitRepoManager] = None
+repositories: Optional[core.git.GitRepoManager] = None
 
 
-def print_details():
+def main():
+    if core.arguments['help']:
+        core.parser.ArgumentParser().help()
+        sys.exit(1)
+    core.pem.configure()
+    manager = core.threads.ThreadManager()
+    if core.arguments['pipeline']:
+        if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
+            globals()['repositories'] = core.git.GitRepoManager()
+            manager.add_thread('GIT_MANAGER', repositories.run)
+        elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
+            # TODO: trigger a small server for managing the ERP instance, use pipeline_port
+            pass
     for key, name in {
         'mode': 'Node',
         'node_type': 'Node Type',
@@ -22,30 +34,10 @@ def print_details():
         'version': 'Version',
     }.items():
         _logger.info(f'{name}: {core.signature[key]}')
-
-
-def destroy():
-    if git_manager:
-        _logger.info("Termination signal received. Stopping all watcher processes.")
-        git_manager.stop_watchers()
-
-
-def main():
-    if core.arguments['help']:
-        core.parser.ArgumentParser().help()
-        sys.exit(1)
-    core.pem.configure()
-    if core.arguments['pipeline']:
-        if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
-            global git_manager
-            git_manager = core.git.GitRepoManager()
-        elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
-            # TODO: trigger a small server for managing the ERP instance, use pipeline_port
-            pass
-    signal.signal(signal.SIGINT, lambda sig, frame: destroy())
-    signal.signal(signal.SIGTERM, lambda sig, frame: destroy())
-    print_details()
+    _logger.info(f'GIT token for webhook: {core.git.token}')
     try:
-        tools.system.wait_for_signal()
+        manager.start_all()
+        manager.wait_for_all()
     except KeyboardInterrupt:
-        destroy()
+        if not core.threads.stop_event.is_set():
+            core.threads.stop_event.set()

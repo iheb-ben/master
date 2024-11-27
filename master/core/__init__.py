@@ -19,6 +19,7 @@ signature = {
 }
 
 from . import logging
+from . import threads
 from . import pem
 from . import jwt
 from . import registry

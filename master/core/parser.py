@@ -10,7 +10,7 @@ from master.tools.enums import Enum
 from master.tools.collection import is_complex_iterable
 from master.tools.generator import generate_unique_string
 from master.tools.paths import temporairy_directory
-from master.tools.system import find_available_port
+from master.tools.system import find_available_port, port_in_range
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -55,6 +55,8 @@ class ArgumentsDict(TypedDict, total=False):
     pipeline: bool
     pipeline_mode: str
     pipeline_port: int
+    pipeline_interval: int
+    pipeline_webhook: bool
     pipeline_origin: str | None
     db_name: str
     db_host: str
@@ -114,7 +116,8 @@ class ParsedArguments:
             config = load_configuration(Path(configuration_path))
             self._ignore.update(config.keys())
             self._merge_configuration(config)
-        self._merge_configuration(load_configuration(self._path))
+        if not configuration_path or configuration_path != str(self._path):
+            self._merge_configuration(load_configuration(self._path))
 
     def allow(self, key: str):
         if key in self._ignore:
@@ -150,8 +153,14 @@ class ParsedArguments:
             validate_ports.append('pipeline_port')
         for port_key in validate_ports:
             port = self.arguments.get(port_key)
-            if port and not (1 <= int(port) <= 65535):
+            if port and not port_in_range(int(port)):
                 raise ValueError(f'Invalid port for "{port_key}": {port}')
+
+        # Validate positive non-null values
+        for key in ['pipeline_interval']:
+            integer = self.arguments.get(key) or -1
+            if integer and integer <= 0:
+                raise ValueError(f'Parameter "{key}" must be strictly positive number')
 
         # Validate mandatory values
         for key in ['master_password']:
@@ -207,6 +216,8 @@ class ArgumentParser:
         pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode], default=PipelineMode.MANAGER.value, help='Pipeline mode')
         pipeline_group.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
         pipeline_group.add_argument('--pipeline-origin', type=str, help='Allow origins (default localhost)')
+        pipeline_group.add_argument('--pipeline-interval', type=int, default=60, help='Periode (Seconds) of checking the git repositories')
+        pipeline_group.add_argument('--pipeline-webhook', action='store_true', default=False, help='Use webhooks instead of custom watcher for any repo changes')
 
         # Database settings
         db_group = self._parser.add_argument_group('Database Configuration', 'Database-related settings')
