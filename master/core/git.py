@@ -167,7 +167,7 @@ class GitRepoManager:
             repo = details.get('repo')
             # Check for missing essential keys
             if not owner or not repo:
-                _logger.warning(f"Missing 'owner' or 'repo' in configuration details: {details}. Skipping.")
+                _logger.warning(f"Missing 'owner' or 'repo' in configuration details: {json.dumps(details)}. Skipping.")
                 continue
             branch = details.get('branch', 'main')
             repo_token = details.get('token', '')
