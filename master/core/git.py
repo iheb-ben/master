@@ -160,3 +160,8 @@ class GitRepoManager:
         if not arguments['pipeline_webhook']:
             self.check()
         time.sleep(arguments['pipeline_interval'])
+
+
+def configure(manager: GitRepoManager):
+    for git_details in arguments['git']:
+        pass
