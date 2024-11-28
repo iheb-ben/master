@@ -161,7 +161,6 @@ class GitRepoManager:
             self.check()
         time.sleep(arguments['pipeline_interval'])
 
-
-def configure(manager: GitRepoManager):
-    for git_details in arguments['git']:
-        pass
+    def configure(self):
+        for git_details in arguments['git']:
+            pass

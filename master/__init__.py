@@ -25,7 +25,7 @@ def main():
     if core.arguments['pipeline']:
         core.pem.configure()
         globals()['repositories'] = core.git.GitRepoManager()
-        core.git.configure(repositories)
+        repositories.configure()
         if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
             manager.add_thread('GIT_MANAGER', repositories.run)
         elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
