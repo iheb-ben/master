@@ -75,6 +75,7 @@ class ArgumentsDict(TypedDict, total=False):
 
 
 _unstorable_fields: Set[str] = {'help', 'node_type', 'logging_level', 'configuration'}
+_path = temporairy_directory().joinpath('configuration.json')
 
 
 def load_configuration(path: Path) -> ArgumentsDict:
@@ -104,11 +105,10 @@ class ParsedArguments:
     """
     Encapsulates parsed command-line arguments and manages configurations.
     """
-    __slots__ = ('arguments', '_path', '_ignore')
+    __slots__ = ('arguments', '_ignore')
 
     def __init__(self, configuration_path: Optional[str] = None):
         self._ignore: Set[str] = _unstorable_fields.copy()
-        self._path = temporairy_directory().joinpath('configuration.json')
         self.arguments: ArgumentsDict = {}
 
         # Load configurations from JSON file or temporary directory
@@ -116,8 +116,8 @@ class ParsedArguments:
             config = load_configuration(Path(configuration_path))
             self._ignore.update(config.keys())
             self._merge_configuration(config)
-        if not configuration_path or configuration_path != str(self._path):
-            self._merge_configuration(load_configuration(self._path))
+        if not configuration_path or configuration_path != str(_path):
+            self._merge_configuration(load_configuration(_path))
 
     def allow(self, key: str):
         if key in self._ignore:
@@ -159,7 +159,7 @@ class ParsedArguments:
         # Validate positive non-null values
         for key in ['pipeline_interval']:
             integer = self.arguments.get(key) or -1
-            if integer and integer <= 0:
+            if integer and integer < 0:
                 raise ValueError(f'Parameter "{key}" must be strictly positive number')
 
         # Validate mandatory values
@@ -177,6 +177,10 @@ class ParsedArguments:
             self.arguments['logging_level'] = logging.DEBUG
         else:
             self.arguments['logging_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
+        if not self.arguments['pipeline_interval']:
+            self.arguments['pipeline_interval'] = 1
+        if not self.arguments['pipeline_origin']:
+            self.arguments['pipeline_origin'] = 'localhost'
         self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
 
     @classproperty
@@ -186,7 +190,7 @@ class ParsedArguments:
 
     def save(self):
         """Saves current arguments to the default JSON configuration file."""
-        save_configuration(self._path, self.arguments)
+        save_configuration(_path, self.arguments)
 
 
 class ArgumentParser:

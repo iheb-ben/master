@@ -1,5 +1,6 @@
 import threading
 from functools import wraps
+from urllib.parse import quote, urlencode
 from pathlib import Path
 from shutil import rmtree
 from git import Repo, GitCommandError
@@ -33,9 +34,14 @@ def _check_lock(func: Callable):
 
 def _url(path: str, endpoint: str):
     repo_path = Path(path)
-    project: str = repo_path.parent.name
-    branch: str = repo_path.name
-    return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?token={token}'
+    project: str = quote(repo_path.parent.name)
+    branch: str = quote(repo_path.name)
+    if endpoint.startswith('/'):
+        endpoint = endpoint[1:]
+    if endpoint.endswith('/'):
+        endpoint = endpoint[:-1]
+    query_params = urlencode({"token": token})
+    return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?{query_params}'
 
 
 # noinspection PyArgumentList
@@ -127,8 +133,6 @@ class GitRepoManager:
 
     @worker
     def run(self) -> None:
-        if arguments['pipeline_webhook']:
-            time.sleep(10)
-        else:
+        if not arguments['pipeline_webhook']:
             self.check()
-            time.sleep(arguments['pipeline_interval'])
+        time.sleep(arguments['pipeline_interval'])
