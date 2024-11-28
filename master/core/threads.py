@@ -63,5 +63,6 @@ def worker(func: Callable):
     def _wrapper(*args, **kwargs):
         while not stop_event.is_set():
             func(*args, **kwargs)
-        _logger.info(f"Worker {func.__module__}.{func.__name__} thread stopping gracefully.")
+        class_name = func.__qualname__.split('.')[0] + '.' if '.' in func.__qualname__ else '.'
+        _logger.info(f"Worker {func.__module__}.{class_name}{func.__name__} thread stopping gracefully.")
     return _wrapper

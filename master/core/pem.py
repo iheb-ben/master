@@ -4,7 +4,9 @@ from cryptography.hazmat.primitives import serialization, hashes
 from pathlib import Path
 import sys
 import logging
+
 from master.core import arguments
+from master.core.parser import PipelineMode
 from master.tools.paths import temporairy_directory
 
 _logger = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ def default_keys_location() -> Path:
         pathlib.Path: The path to the folder where keys should be stored.
     """
     folder_name = 'node_keys'
-    if arguments['pipeline']:
+    if arguments['pipeline_mode'] == PipelineMode.MANAGER.value:
         folder_name = 'master_keys'
     directory_path = Path(arguments['directory']).joinpath(folder_name)
     if not directory_path.exists():
