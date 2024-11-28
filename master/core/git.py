@@ -134,6 +134,20 @@ class GitRepoManager:
                 _logger.error(f"Error during commit and push: {e}", exc_info=True)
 
     @_check_lock
+    def delete(self, repo_path: str) -> None:
+        """Remove repo from manager."""
+        if repo_path not in self.repos:
+            _logger.warning(f'Repository [{repo_path}] not found.')
+            return
+        with self._check_repo_lock(repo_path):
+            if not Path(repo_path).exists():
+                return
+            del self.repos[repo_path]
+            del self._repo_locks[repo_path]
+            del self._last_commits[repo_path]
+            rmtree(repo_path)
+
+    @_check_lock
     def _paths(self) -> List[str]:
         return [path for path in self.repos.keys()]
 
