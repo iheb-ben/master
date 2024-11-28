@@ -41,7 +41,7 @@ def _url(path: str, endpoint: str):
         endpoint = endpoint[1:]
     if endpoint.endswith('/'):
         endpoint = endpoint[:-1]
-    query_params = urlencode({"token": token})
+    query_params = urlencode({'token': token})
     return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?{query_params}'
 
 
@@ -103,7 +103,7 @@ class GitRepoManager:
             try:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
-                if last_commit:
+                if last_commit != new_last_commit:
                     _logger.info(f'Changes in [{repo_path}] since last commit {last_commit}:')
                     for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
                         requests.post(_url(repo_path, 'commit/add'), json.dumps({
@@ -112,8 +112,7 @@ class GitRepoManager:
                             'author': commit.author.name,
                         }))
                         _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{commit.message}" by "{commit.author.name}".')
-                self._last_commits[repo_path] = new_last_commit
-                if not last_commit or last_commit != new_last_commit:
+                    self._last_commits[repo_path] = new_last_commit
                     requests.get(_url(repo_path, 'build'))
             except GitCommandError as e:
                 _logger.error(f"Error pulling repo: {e}", exc_info=True)
