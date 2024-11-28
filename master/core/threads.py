@@ -30,7 +30,7 @@ class ThreadManager:
         _logger.info(f"Signal {signum} received. Stopping all threads.")
         stop_event.set()
 
-    def add_thread(self, name, target, *args, **kwargs):
+    def add_thread(self, name: str, target: Callable, *args, **kwargs):
         """
         Add a new thread to the manager.
         :param name: The thread name.

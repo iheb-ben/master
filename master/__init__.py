@@ -34,7 +34,6 @@ def main():
         'version': 'Version',
     }.items():
         _logger.info(f'{name}: {core.signature[key]}')
-    _logger.info(f'GIT token for webhook: {core.git.token}')
     try:
         manager.start_all()
         manager.wait_for_all()
