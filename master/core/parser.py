@@ -76,7 +76,7 @@ class ArgumentsDict(TypedDict, total=False):
 
 
 _unstorable_fields: Set[str] = {'help', 'node_type', 'logging_level', 'configuration'}
-_path = temporairy_directory().joinpath('configuration.json')
+_path = temporairy_directory() / 'configuration.json'
 
 
 def load_configuration(path: Path) -> ArgumentsDict:

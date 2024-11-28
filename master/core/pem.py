@@ -24,7 +24,7 @@ def default_keys_location() -> Path:
     folder_name = 'node_keys'
     if arguments['pipeline_mode'] == PipelineMode.MANAGER.value:
         folder_name = 'master_keys'
-    directory_path = Path(arguments['directory']).joinpath(folder_name)
+    directory_path = Path(arguments['directory']) / folder_name
     if not directory_path.exists():
         directory_path.mkdir()
     return directory_path
@@ -61,8 +61,8 @@ def configure():
     """
     global private_key_path, public_key_path
     key_location = default_keys_location()
-    private_key_path = key_location.joinpath('private_key.pem')
-    public_key_path = key_location.joinpath('public_key.pem')
+    private_key_path = key_location / 'private_key.pem'
+    public_key_path = key_location / 'public_key.pem'
     if private_key_path.exists() and not public_key_path.exists():
         _logger.debug('Load the private key and regenerate the public key')
         with open(private_key_path, 'rb') as private_file:

@@ -18,7 +18,7 @@ from master.tools.paths import is_folder_empty
 
 _logger = logging.getLogger(__name__)
 token = generate_jwt(payload=signature, expiration_minutes=0)
-directory = Path(arguments['directory']).joinpath('repositories')
+directory = Path(arguments['directory']) / 'repositories'
 if not directory.exists():
     directory.mkdir()
 
@@ -60,7 +60,7 @@ class GitRepoManager:
         """Clone a repository to a specified path."""
         try:
             repo: Optional[Repo] = None
-            repo_path = Path(path).joinpath('.git')
+            repo_path = Path(path) / '.git'
             if repo_path.exists():
                 if not is_folder_empty(repo_path, False):
                     repo = Repo(path)
@@ -160,18 +160,19 @@ class GitRepoManager:
             self.check()
         time.sleep(arguments['pipeline_interval'])
 
-    def configure(self):
+    def configure(self) -> None:
+        """Configure repositories based on the provided arguments."""
         for details in arguments['git']:
-            owner = details['owner']
-            repo = details['repo']
-            branch = details.get('branch')
-            if not branch:
-                branch = 'main'
-            repo_token = details.get('token')
-            if repo_token:
-                repo_token += '@'
-            url = 'https://'
-            if repo_token:
-                url += repo_token
-            url += f'github.com/{owner}/{repo}.git'
-            self.clone(url=url, path=str(directory.joinpath(repo).joinpath(branch)))
+            owner = details.get('owner')
+            repo = details.get('repo')
+            # Check for missing essential keys
+            if not owner or not repo:
+                _logger.warning(f"Missing 'owner' or 'repo' in configuration details: {details}. Skipping.")
+                continue
+            branch = details.get('branch', 'main')
+            repo_token = details.get('token', '')
+            token_prefix = repo_token and f'{repo_token}@' or ''
+            url = f'https://{token_prefix}github.com/{owner}/{repo}.git'
+            repo_path = directory / repo / branch
+            # Clone the repository and/or add it to manager if already exists
+            self.clone(url=url, path=str(repo_path))
