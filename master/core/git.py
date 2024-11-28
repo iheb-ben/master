@@ -99,7 +99,7 @@ class GitRepoManager:
             if repo is None:
                 _logger.warning(f'Repository [{repo_path}] not found.')
                 return
-            last_commit = self.last_commits.get(repo_path)
+            last_commit = self._last_commits.get(repo_path)
             try:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
@@ -162,5 +162,17 @@ class GitRepoManager:
         time.sleep(arguments['pipeline_interval'])
 
     def configure(self):
-        for git_details in arguments['git']:
-            pass
+        for details in arguments['git']:
+            owner = details['owner']
+            repo = details['repo']
+            branch = details.get('branch')
+            if not branch:
+                branch = 'main'
+            repo_token = details.get('token')
+            if repo_token:
+                repo_token += '@'
+            url = 'https://'
+            if repo_token:
+                url += repo_token
+            url += f'github.com/{owner}/{repo}.git'
+            self.clone(url=url, path=str(directory.joinpath(repo).joinpath(branch)))

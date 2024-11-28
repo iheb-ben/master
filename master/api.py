@@ -1,4 +1,4 @@
-from typing import Callable, Any, Type, Dict, Optional
+from typing import Callable, Any, Type, Dict, Optional, Union, List
 import threading
 
 
@@ -65,3 +65,16 @@ class lazy_classproperty(classproperty):
         func_name = self.__read_name(instance.__class__)
         with self._lock:
             self._register[func_name] = value
+
+
+def route(urls: Union[str, List[str]], auth: Optional[str] = None):
+    if not auth:
+        auth = 'public'
+
+    def _(func):
+        from master.core.endpoints import Endpoint
+        Endpoint.register(urls, func, {
+            'auth': auth,
+        })
+        return func
+    return _

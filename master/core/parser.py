@@ -7,7 +7,7 @@ from typing import Dict, Optional, TypedDict, List, Set, Callable
 
 from master.api import classproperty
 from master.tools.enums import Enum
-from master.tools.collection import is_complex_iterable
+from master.tools.collection import is_complex_iterable, OrderedSet
 from master.tools.generator import generate_unique_string
 from master.tools.paths import temporairy_directory
 from master.tools.system import find_available_port, port_in_range
@@ -57,7 +57,7 @@ class ArgumentsDict(TypedDict, total=False):
     pipeline_port: int
     pipeline_interval: int
     pipeline_webhook: bool
-    pipeline_origin: str | None
+    pipeline_origin: Optional[str]
     db_name: str
     db_host: str
     db_port: int
@@ -68,6 +68,7 @@ class ArgumentsDict(TypedDict, total=False):
     db_mongo_port: int
     db_mongo_user: str
     db_mongo_password: str
+    git: List[str]
     # Computed settings
     logging_level: int
     node_type: str
@@ -118,6 +119,9 @@ class ParsedArguments:
             self._merge_configuration(config)
         if not configuration_path or configuration_path != str(_path):
             self._merge_configuration(load_configuration(_path))
+        if not is_complex_iterable(self.arguments.get('git')):
+            self.arguments['git'] = []
+        self.arguments['git'] = list(OrderedSet([data for data in self.arguments['git'] if data]))
 
     def allow(self, key: str):
         if key in self._ignore:
