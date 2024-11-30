@@ -16,13 +16,14 @@ from . import core
 
 _logger = logging.getLogger(__name__)
 repositories: Optional[core.git.GitRepoManager] = None
+manager: Optional[core.threads.ThreadManager] = None
 
 
 def main():
     if core.arguments['help']:
         core.parser.ArgumentParser().help()
-        sys.exit(1)
-    manager = core.threads.ThreadManager()
+        sys.exit(0)
+    globals()['manager'] = core.threads.ThreadManager()
     if core.arguments['pipeline']:
         core.pem.configure()
         globals()['repositories'] = core.git.GitRepoManager()
@@ -44,3 +45,4 @@ def main():
     manager.start_all()
     while manager.is_alive():
         time.sleep(1)
+    _logger.info('ERP stopped')
