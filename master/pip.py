@@ -18,10 +18,10 @@ def install_requirements(requirement_file_path: Union[str, os.PathLike], require
                 stderr=subprocess.PIPE,
                 text=True,
             )
-            _logger.info(f'Requirements from {file_path} installed successfully.')
+            _logger.info(f'Requirements from "{file_path}" installed successfully.')
         except subprocess.CalledProcessError as e:
             if required:
                 raise
-            _logger.error(f'Error occurred while installing requirements: {e.stderr}', exc_info=True)
+            _logger.error(f'Error occurred while installing requirements: {e}', exc_info=True)
     else:
         _logger.warning(f'Requirement file not found: {file_path}')
