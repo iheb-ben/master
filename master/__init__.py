@@ -28,22 +28,22 @@ def main() -> None:
         core.pem.configure()
         globals()['repositories'] = core.git.GitRepoManager()
         repositories.configure()
-        if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
-            manager.add_thread('GIT_MANAGER', repositories.run)
-        elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
-            manager.add_thread('GIT_NODE', repositories.run)
-            # TODO: trigger a small server for managing the ERP instance, use pipeline_port
-            pass
-    for key, name in {
-        'mode': 'Environment',
-        'node_type': 'Node Type',
-        'os_name': 'OS Name',
-        'os_version': 'OS Version',
-        'version': 'Version',
-    }.items():
-        _logger.info(f'{name}: {core.signature[key]}')
-    manager.start_all()
-    _logger.info('ERP started')
-    while manager.is_alive():
-        time.sleep(1)
-    _logger.info('ERP stopped')
+        if not core.arguments['pipeline_webhook']:
+            if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
+                manager.add_thread('GIT_MANAGER', repositories.run)
+            elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
+                manager.add_thread('GIT_NODE', repositories.run)
+    if manager.threads:
+        for key, name in {
+            'mode': 'Environment',
+            'node_type': 'Node Type',
+            'os_name': 'OS Name',
+            'os_version': 'OS Version',
+            'version': 'Version',
+        }.items():
+            _logger.info(f'{name}: {core.signature[key]}')
+        manager.start_all()
+        _logger.info('ERP started')
+        while manager.is_alive():
+            time.sleep(1)
+        _logger.info('ERP stopped')

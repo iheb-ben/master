@@ -7,7 +7,7 @@ from typing import Dict, Optional, TypedDict, List, Set, Callable
 
 from master.api import classproperty
 from master.tools.enums import Enum
-from master.tools.collection import is_complex_iterable, OrderedSet
+from master.tools.collection import is_complex_iterable
 from master.tools.generator import generate_unique_string
 from master.tools.paths import temporairy_directory
 from master.tools.system import find_available_port, port_in_range
@@ -51,6 +51,7 @@ class ArgumentsDict(TypedDict, total=False):
     master_password: str
     jwt_secret: str
     port: int
+    addons_paths: List[str]
     directory: str
     pipeline: bool
     pipeline_mode: str
@@ -68,7 +69,7 @@ class ArgumentsDict(TypedDict, total=False):
     db_mongo_port: int
     db_mongo_user: str
     db_mongo_password: str
-    git: List[str]
+    git: List[Dict[str, str]]
     # Computed settings
     logging_level: int
     node_type: str
@@ -119,9 +120,11 @@ class ParsedArguments:
             self._merge_configuration(config)
         if not configuration_path or configuration_path != str(_path):
             self._merge_configuration(load_configuration(_path))
-        if not is_complex_iterable(self.arguments.get('git')):
+        if not self.arguments.get('git'):
             self.arguments['git'] = []
-        self.arguments['git'] = list(OrderedSet([data for data in self.arguments['git'] if data]))
+        if not is_complex_iterable(self.arguments['git']):
+            # noinspection PyTypeChecker
+            self.arguments['git'] = [self.arguments['git']]
 
     def allow(self, key: str):
         if key in self._ignore:
@@ -150,6 +153,14 @@ class ParsedArguments:
             path = self.arguments.get(path_key)
             if path and not Path(str(path)).is_dir():
                 raise ValueError(f'Invalid directory path for "{path_key}": {path}')
+        for path_key in ['addons_paths']:
+            paths = self.arguments.get(path_key)
+            if not paths:
+                continue
+            # noinspection PyTypeChecker
+            for path in paths:
+                if not Path(str(path)).is_dir():
+                    raise ValueError(f'Invalid directory path for "{path_key}": {path}')
 
         # Validate port ranges
         validate_ports = ['port', 'db_port', 'db_mongo_port']
@@ -212,6 +223,7 @@ class ArgumentParser:
         self._parser.add_argument('--mode', choices=[e.value for e in Mode], default=Mode.STAGING.value, help='ERP mode')
         self._parser.add_argument('--configuration', type=str, help='Path to ERP configuration file in JSON format')
         self._parser.add_argument('--master-password', type=str, help='Master password')
+        self._parser.add_argument('--addons-paths', nargs='+', type=str, help='Addons paths')
         self._parser.add_argument('--directory', type=str, default=str(temporairy_directory()), help='Path to ERP directory folder')
         self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
@@ -270,4 +282,6 @@ def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace)
             namespace.jwt_secret = generator(255)
         else:
             namespace.jwt_secret = parsed.arguments['jwt_secret']
+    if not namespace.addons_paths:
+        namespace.addons_paths = []
     return parsed

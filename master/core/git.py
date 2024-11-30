@@ -167,17 +167,27 @@ class GitRepoManager:
 
     def configure(self) -> None:
         """Configure repositories based on the provided arguments."""
+        added_sets = set()
+        build_message: Callable = lambda p, d: f'Missing "{p}" in configuration details: {json.dumps(d)}. Skipping.'
         for details in arguments['git']:
+            string = json.dumps(details)
+            if string in added_sets:
+                continue
+            added_sets.add(string)
             owner = details.get('owner')
             repo = details.get('repo')
             # Check for missing essential keys
-            if not owner or not repo:
-                _logger.warning(f"Missing 'owner' or 'repo' in configuration details: {json.dumps(details)}. Skipping.")
+            if not repo:
+                _logger.warning(build_message('repo', details))
+                continue
+            if not owner:
+                _logger.warning(build_message('owner', details))
                 continue
             branch = details.get('branch', 'main')
             repo_token = details.get('token', '')
             token_prefix = repo_token and f'{repo_token}@' or ''
             url = f'https://{token_prefix}github.com/{owner}/{repo}.git'
-            repo_path = directory / repo / branch
+            repo_path = str(directory / repo / branch)
             # Clone the repository and/or add it to manager if already exists
-            self.clone(url=url, path=str(repo_path))
+            arguments['addons_paths'].append(repo_path)
+            self.clone(url=url, path=repo_path)
