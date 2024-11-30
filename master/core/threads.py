@@ -69,7 +69,8 @@ def worker(func: Callable):
                 call_method(self, '_start')
                 started = True
             func(self, *args, **kwargs)
-        call_method(self, '_destroy')
+        if started:
+            call_method(self, '_destroy')
         class_name = func.__qualname__.split('.')[0] + '.' if '.' in func.__qualname__ else '.'
         _logger.info(f"Worker {func.__module__}.{class_name}{func.__name__} thread stopping gracefully.")
     return _wrapper
