@@ -19,10 +19,10 @@ repositories: Optional[core.git.GitRepoManager] = None
 manager: Optional[core.threads.ThreadManager] = None
 
 
-def main():
+def main() -> None:
     if core.arguments['help']:
         core.parser.ArgumentParser().help()
-        sys.exit(0)
+        return
     globals()['manager'] = core.threads.ThreadManager()
     if core.arguments['pipeline']:
         core.pem.configure()
