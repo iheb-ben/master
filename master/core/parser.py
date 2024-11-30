@@ -200,6 +200,7 @@ class ParsedArguments:
         if not self.arguments['pipeline_origin']:
             self.arguments['pipeline_origin'] = 'localhost'
         self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
+        self.arguments['addons_paths'].insert(0, str(Path('.').joinpath('master/addons').absolute().resolve()))
 
     @classproperty
     def arguments_names(cls) -> List[str]:
