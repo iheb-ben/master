@@ -51,22 +51,20 @@ def _url(path: str, endpoint: str):
     return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?{query_params}'
 
 
-def _post_url(url, body):
+def _post_url(url, body) -> None:
     try:
         response = requests.post(url=url, json=body)
         response.raise_for_status()
-        return response.text
     except requests.RequestException:
-        return "Response not found"
+        pass
 
 
-def _get_url(url):
+def _get_url(url) -> None:
     try:
         response = requests.get(url=url)
         response.raise_for_status()
-        return response.text
     except requests.RequestException:
-        return "Response not found"
+        pass
 
 
 # noinspection PyArgumentList
@@ -128,7 +126,7 @@ class GitRepoManager:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
                 if last_commit != new_last_commit:
-                    _logger.info(f'Changes in [{repo_path}] since last commit {last_commit}:')
+                    _logger.debug(f'Changes in [{repo_path}] since last commit {last_commit}:')
                     for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
                         _post_url(url=_url(repo_path, 'commit/add'), body={
                             'hexsha': commit.hexsha,
