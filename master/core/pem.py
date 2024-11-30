@@ -85,7 +85,7 @@ def configure():
         rename_file_if_exists(public_key_path)
         generate_keys()
     else:
-        _logger.info(f'Public key in path: "{public_key_path}"')
+        _logger.debug(f'Public key in path: "{public_key_path}"')
 
 
 def generate_keys():
@@ -109,7 +109,7 @@ def generate_keys():
             encoding=serialization.Encoding.PEM,
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ))
-    _logger.info(f'Generated new public key in path: "{public_key_path}"')
+    _logger.debug(f'Generated new public key in path: "{public_key_path}"')
 
 
 # noinspection PyBroadException
