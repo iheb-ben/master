@@ -8,12 +8,12 @@ from typing import Dict, Optional, Callable, List
 import time
 import json
 import logging
-import requests
 
-for logger_name in ['git', 'git.cmd', 'git.repo.base']:
+for logger_name in ['urllib3.connectionpool', 'git', 'git.cmd', 'git.repo.base']:
     logger = logging.getLogger(logger_name)
     logger.setLevel(logging.CRITICAL)
 
+import requests
 from git import Repo, GitCommandError
 
 from master.core import arguments, signature
