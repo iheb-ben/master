@@ -1,12 +1,12 @@
-from typing import Any
+from typing import Any, Tuple, Dict, Type, Union
 import inspect
 
 
-def _get_mangled_method_name(klass: Any, method_name: str) -> str:
+def _get_mangled_method_name(klass: Union[object, Type[Any]], method_name: str) -> str:
     """
     Returns the mangled method name if the method name starts with double underscores.
     Otherwise, returns the original method name.
-    :param klass: The class or instance for which to mangle the method name.
+    :param klass: The class/instance for which to mangle the method name.
     :param method_name: The original method name.
     :return: The mangled method name if applicable, otherwise the original method name.
     """
@@ -16,36 +16,36 @@ def _get_mangled_method_name(klass: Any, method_name: str) -> str:
     return method_name
 
 
-def has_method(klass: Any, method_name: str) -> bool:
+def has_method(self: object, method_name: str) -> bool:
     """
-    Checks if a class or instance has a method with the given name.
-    :param klass: The class or instance to check.
+    Checks if an instance has a method with the given name.
+    :param self: The instance to check.
     :param method_name: The name of the method to look for.
     :return: True if the method exists and is callable, False otherwise.
     """
-    method_name = _get_mangled_method_name(klass, method_name)
-    return hasattr(klass, method_name) and callable(getattr(klass, method_name))
+    method_name = _get_mangled_method_name(self, method_name)
+    return hasattr(self, method_name) and callable(getattr(self, method_name))
 
 
-def call_method(klass: Any, method_name: str, *args: object, **kwargs: object) -> Any:
+def call_method(self: object, method_name: str, *args: Tuple[object, ...], **kwargs: Dict[str, object]) -> Any:
     """
-    Calls a method on a class or instance if it exists, handling name-mangled methods.
-    :param klass: The class or instance to call the method on.
+    Calls a method on an instance if it exists, handling name-mangled methods.
+    :param self: The instance to call the method on.
     :param method_name: The name of the method to call.
     :param args: Positional arguments for the method.
     :param kwargs: Keyword arguments for the method.
     :return: The result of the method call if it exists, otherwise None.
     """
-    method_name = _get_mangled_method_name(klass, method_name)
-    if has_method(klass, method_name):
-        return getattr(klass, method_name)(*args, **kwargs)
+    method_name = _get_mangled_method_name(self, method_name)
+    if has_method(self, method_name):
+        return getattr(self, method_name)(*args, **kwargs)
     return None
 
 
-def is_classmethod(klass: Any, method_name: str) -> bool:
+def is_classmethod(klass: Type[Any], method_name: str) -> bool:
     """
     Checks if a method is a class method.
-    :param klass: The class or instance containing the method.
+    :param klass: The class containing the method.
     :param method_name: The name of the method to check.
     :return: True if the method is a class method, False otherwise.
     """
@@ -53,10 +53,10 @@ def is_classmethod(klass: Any, method_name: str) -> bool:
     return isinstance(method, classmethod)
 
 
-def call_classmethod(klass: Any, method_name: str, *args, **kwargs) -> Any:
+def call_classmethod(klass: Type[Any], method_name: str, *args: Tuple[object, ...], **kwargs: Dict[str, object]) -> Any:
     """
-    Calls a classmethod of a class if it exists, handling name-mangled methods.
-    :param klass: The class to call the method on.
+    Calls a classmethod of a class/instance if it exists, handling name-mangled methods.
+    :param klass: The class/instance containing the method.
     :param method_name: The name of the method to call.
     :param args: Positional arguments for the method.
     :param kwargs: Keyword arguments for the method.

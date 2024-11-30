@@ -4,12 +4,17 @@ from functools import wraps
 from urllib.parse import quote, urlencode
 from pathlib import Path
 from shutil import rmtree
-from git import Repo, GitCommandError
 from typing import Dict, Optional, Callable, List
 import time
 import json
 import logging
 import requests
+
+for logger_name in ['git', 'git.cmd', 'git.repo.base']:
+    logger = logging.getLogger(logger_name)
+    logger.setLevel(logging.CRITICAL)
+
+from git import Repo, GitCommandError
 
 from master.core import arguments, signature
 from master.core.jwt import generate_jwt

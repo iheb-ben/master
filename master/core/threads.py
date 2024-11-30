@@ -5,6 +5,8 @@ import logging
 from functools import wraps
 from typing import Callable
 
+from master.tools.methods import call_method
+
 _logger = logging.getLogger(__name__)
 stop_event = threading.Event()
 
@@ -60,9 +62,14 @@ class ThreadManager:
 
 def worker(func: Callable):
     @wraps(func)
-    def _wrapper(*args, **kwargs):
+    def _wrapper(self, *args, **kwargs):
+        started = False
         while not stop_event.is_set():
-            func(*args, **kwargs)
+            if not started:
+                call_method(self, '_start')
+                started = True
+            func(self, *args, **kwargs)
+        call_method(self, '_destroy')
         class_name = func.__qualname__.split('.')[0] + '.' if '.' in func.__qualname__ else '.'
         _logger.info(f"Worker {func.__module__}.{class_name}{func.__name__} thread stopping gracefully.")
     return _wrapper
