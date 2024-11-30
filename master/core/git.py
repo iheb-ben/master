@@ -50,6 +50,24 @@ def _url(path: str, endpoint: str):
     return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?{query_params}'
 
 
+def _post_url(url, body):
+    try:
+        response = requests.post(url=url, json=body)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException:
+        return "Response not found"
+
+
+def _get_url(url):
+    try:
+        response = requests.get(url=url)
+        response.raise_for_status()
+        return response.text
+    except requests.RequestException:
+        return "Response not found"
+
+
 # noinspection PyArgumentList
 class GitRepoManager:
     __slots__ = ('repos', '_lock', '_repo_locks', '_last_commits')
@@ -111,14 +129,18 @@ class GitRepoManager:
                 if last_commit != new_last_commit:
                     _logger.info(f'Changes in [{repo_path}] since last commit {last_commit}:')
                     for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
-                        requests.post(_url(repo_path, 'commit/add'), json.dumps({
+                        _post_url(url=_url(repo_path, 'commit/add'), body={
+                            'token': token,
                             'hexsha': commit.hexsha,
                             'message': commit.message,
-                            'author': commit.author.name,
-                        }))
+                            'author': {
+                                'name': commit.author.name,
+                                'email': commit.author.email,
+                            },
+                        })
                         _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{commit.message}" by "{commit.author.name}".')
                     self._last_commits[repo_path] = new_last_commit
-                    requests.get(_url(repo_path, 'build'))
+                    _get_url(url=_url(repo_path, 'build'))
             except GitCommandError as e:
                 _logger.error(f"Error pulling repo: {e}", exc_info=True)
 
