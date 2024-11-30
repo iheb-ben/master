@@ -24,4 +24,4 @@ def install_requirements(requirement_file_path: Union[str, os.PathLike], require
                 raise
             _logger.error(f'Error occurred while installing requirements: {e.stderr}', exc_info=True)
     else:
-        _logger.info(f'Requirement file not found: {file_path}')
+        _logger.warning(f'Requirement file not found: {file_path}')
