@@ -30,7 +30,7 @@ class ThreadManager:
         """
         Signal handler to stop all threads when the program is terminated.
         """
-        _logger.info(f"Signal {signum} received. Stopping all threads.")
+        _logger.debug(f"Signal {signum} received. Stopping all threads.")
         stop_event.set()
 
     def add_thread(self, name: str, target: Callable, *args, **kwargs):
@@ -77,5 +77,5 @@ def worker(func: Callable):
         if started_threads[current]:
             call_method(self, '_destroy')
             started_threads[current] = False
-        _logger.info(f"Worker {func.__module__}.{func.__qualname__} thread stopping gracefully.")
+        _logger.debug(f"Worker {func.__module__}.{func.__qualname__} thread stopping gracefully.")
     return _wrapper
