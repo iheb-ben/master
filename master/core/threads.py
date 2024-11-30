@@ -1,9 +1,8 @@
 import threading
 import signal
-import time
 import logging
 from functools import wraps
-from typing import Callable
+from typing import Callable, List
 
 from master.tools.methods import call_method
 
@@ -19,7 +18,7 @@ class ThreadManager:
     __slots__ = 'threads'
 
     def __init__(self):
-        self.threads = []
+        self.threads: List[threading.Thread] = []
         # Attach signal handlers for SIGINT and SIGTERM
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -51,13 +50,8 @@ class ThreadManager:
         for thread in self.threads:
             thread.start()
 
-    def wait_for_all(self):
-        """
-        Wait for all threads to complete. This method blocks until
-        all threads are terminated.
-        """
-        for thread in self.threads:
-            thread.join()
+    def is_alive(self):
+        return any(thread.is_alive() for thread in self.threads)
 
 
 def worker(func: Callable):

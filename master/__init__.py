@@ -1,4 +1,5 @@
 import signal
+import time
 import traceback
 import sys
 import logging
@@ -40,8 +41,6 @@ def main():
         'version': 'Version',
     }.items():
         _logger.info(f'{name}: {core.signature[key]}')
-    try:
-        manager.start_all()
-        manager.wait_for_all()
-    except KeyboardInterrupt:
-        signal.raise_signal(signal.SIGTERM)
+    manager.start_all()
+    while manager.is_alive():
+        time.sleep(1)
