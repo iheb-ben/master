@@ -1,13 +1,15 @@
 import threading
 import signal
 import logging
+import time
 from functools import wraps
-from typing import Callable, List
+from typing import Callable, List, Dict
 
 from master.tools.methods import call_method
 
 _logger = logging.getLogger(__name__)
 stop_event = threading.Event()
+started_threads: Dict[threading.Thread, bool] = {}
 
 
 class ThreadManager:
@@ -48,7 +50,15 @@ class ThreadManager:
         Start all managed threads.
         """
         for thread in self.threads:
+            if thread.is_alive():
+                continue
             thread.start()
+            print_debug_message = False
+            while not started_threads.get(thread):
+                if not print_debug_message:
+                    _logger.debug(f'Waiting for thread "{thread.name}" to start')
+                    print_debug_message = True
+                time.sleep(1)
 
     def is_alive(self):
         return any(thread.is_alive() for thread in self.threads)
@@ -57,13 +67,15 @@ class ThreadManager:
 def worker(func: Callable):
     @wraps(func)
     def _wrapper(self, *args, **kwargs):
-        started = False
+        current = threading.current_thread()
+        started_threads[current] = False
         while not stop_event.is_set():
-            if not started:
+            if not started_threads[current]:
                 call_method(self, '_start')
-                started = True
+                started_threads[current] = True
             func(self, *args, **kwargs)
-        if started:
+        if started_threads[current]:
             call_method(self, '_destroy')
+            started_threads[current] = False
         _logger.info(f"Worker {func.__module__}.{func.__qualname__} thread stopping gracefully.")
     return _wrapper

@@ -43,6 +43,7 @@ def main() -> None:
     }.items():
         _logger.info(f'{name}: {core.signature[key]}')
     manager.start_all()
+    _logger.info('ERP started')
     while manager.is_alive():
         time.sleep(1)
     _logger.info('ERP stopped')
