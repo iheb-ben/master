@@ -72,10 +72,9 @@ class ArgumentsDict(TypedDict, total=False):
     # Computed settings
     logging_level: int
     node_type: str
-    help: bool
 
 
-_unstorable_fields: Set[str] = {'help', 'node_type', 'logging_level', 'configuration'}
+_unstorable_fields: Set[str] = {'node_type', 'logging_level', 'configuration'}
 _path = temporairy_directory() / 'configuration.json'
 
 
@@ -114,12 +113,13 @@ class ParsedArguments:
         self.arguments: ArgumentsDict = {}
 
         # Load configurations from JSON file or temporary directory
+        self._merge_configuration(load_configuration(_path))
+        self.arguments['addons_paths'] = []
+        self.arguments['git'] = []
         if configuration_path:
             config = load_configuration(Path(configuration_path))
             self._ignore.update(config.keys())
             self._merge_configuration(config)
-        if not configuration_path or configuration_path != str(_path):
-            self._merge_configuration(load_configuration(_path))
         if not self.arguments.get('git'):
             self.arguments['git'] = []
         if not isinstance(self.arguments['git'], list):
@@ -199,8 +199,6 @@ class ParsedArguments:
             self.arguments['pipeline_interval'] = 1
         if not self.arguments['pipeline_origin']:
             self.arguments['pipeline_origin'] = 'localhost'
-        self.arguments['help'] = any(v in sys.argv for v in ['-h', '--help'])
-        self.arguments['addons_paths'].insert(0, str(Path('.').joinpath('master/addons').absolute().resolve()))
 
     @classproperty
     def arguments_names(cls) -> List[str]:
@@ -265,10 +263,6 @@ class ArgumentParser:
         parsed_arguments.save()
         parsed_arguments.compute()
         return parsed_arguments.arguments
-
-    def help(self):
-        """Displays help information."""
-        self._parser.print_help()
 
 
 def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace) -> ParsedArguments:

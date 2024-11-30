@@ -20,9 +20,6 @@ manager: Optional[core.threads.ThreadManager] = None
 
 
 def main() -> None:
-    if core.arguments['help']:
-        core.parser.ArgumentParser().help()
-        return
     globals()['manager'] = core.threads.ThreadManager()
     if core.arguments['pipeline']:
         core.pem.configure()
