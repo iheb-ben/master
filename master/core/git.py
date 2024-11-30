@@ -90,10 +90,10 @@ class GitRepoManager:
                     rmtree(path)
             if not repo:
                 repo = Repo.clone_from(url, path)
+                _logger.debug(f"Cloned repo from {url} to [{path}]")
             self.repos[path] = repo
             self._repo_locks[path] = threading.RLock()
             self._last_commits[path] = repo.head.commit.hexsha
-            _logger.info(f"Cloned repo from {url} to [{path}]")
         except GitCommandError as e:
             _logger.error(f"Error cloning repo: {e}")
 
