@@ -29,3 +29,13 @@ def is_class_norm_compliant(class_name: str) -> bool:
         bool: True if the class name complies, False otherwise.
     """
     return bool(re.match(r"^_?[A-Za-z]+$", class_name))
+
+
+def clean_string_advanced(message, chars_to_remove=None):
+    """
+    Cleans the input message by removing trailing specified characters.
+    Defaults to whitespace if no characters are specified.
+    """
+    if chars_to_remove is None:
+        chars_to_remove = " \t\n\r"
+    return message.rstrip(chars_to_remove)

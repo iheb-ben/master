@@ -19,6 +19,7 @@ from git import Repo, GitCommandError
 from master.core import arguments, signature
 from master.core.jwt import generate_jwt
 from master.core.threads import worker
+from master.tools.norms import clean_string_advanced
 from master.tools.paths import is_folder_empty
 
 _logger = logging.getLogger(__name__)
@@ -130,7 +131,6 @@ class GitRepoManager:
                     _logger.info(f'Changes in [{repo_path}] since last commit {last_commit}:')
                     for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
                         _post_url(url=_url(repo_path, 'commit/add'), body={
-                            'token': token,
                             'hexsha': commit.hexsha,
                             'message': commit.message,
                             'author': {
@@ -138,7 +138,7 @@ class GitRepoManager:
                                 'email': commit.author.email,
                             },
                         })
-                        _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{commit.message}" by "{commit.author.name}".')
+                        _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
                     self._last_commits[repo_path] = new_last_commit
                     _get_url(url=_url(repo_path, 'build'))
             except GitCommandError as e:
