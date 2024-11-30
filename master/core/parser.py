@@ -7,7 +7,6 @@ from typing import Dict, Optional, TypedDict, List, Set, Callable
 
 from master.api import classproperty
 from master.tools.enums import Enum
-from master.tools.collection import is_complex_iterable
 from master.tools.generator import generate_unique_string
 from master.tools.paths import temporairy_directory
 from master.tools.system import find_available_port, port_in_range
@@ -109,6 +108,7 @@ class ParsedArguments:
     """
     __slots__ = ('arguments', '_ignore')
 
+    # noinspection PyTypeChecker
     def __init__(self, configuration_path: Optional[str] = None):
         self._ignore: Set[str] = _unstorable_fields.copy()
         self.arguments: ArgumentsDict = {}
@@ -122,9 +122,12 @@ class ParsedArguments:
             self._merge_configuration(load_configuration(_path))
         if not self.arguments.get('git'):
             self.arguments['git'] = []
-        if not is_complex_iterable(self.arguments['git']):
-            # noinspection PyTypeChecker
+        if not isinstance(self.arguments['git'], list):
             self.arguments['git'] = [self.arguments['git']]
+        if not self.arguments.get('addons_paths'):
+            self.arguments['addons_paths'] = []
+        if not isinstance(self.arguments['addons_paths'], list):
+            self.arguments['addons_paths'] = [self.arguments['addons_paths']]
 
     def allow(self, key: str):
         if key in self._ignore:
