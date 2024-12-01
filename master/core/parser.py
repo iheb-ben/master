@@ -103,11 +103,10 @@ class ParsedArguments:
     """
     Encapsulates parsed command-line arguments and manages configurations.
     """
-    __slots__ = ('default_arguments', 'arguments', 'ignore_keys')
+    __slots__ = ('master_password', 'jwt_secret', 'arguments', 'ignore_keys')
 
-    # noinspection PyTypeChecker
     def __init__(self, configuration_path: Optional[str] = None):
-        self.ignore_keys: Set[str] = {}
+        self.ignore_keys: Set[str] = set()
         self.arguments = ArgumentsDict()
         # Load configuration from input JSON file
         if configuration_path:
@@ -116,8 +115,10 @@ class ParsedArguments:
             # Add key that will be ignored when loading the inputed values from the ArgumentParser
             self.ignore_keys.update(config.keys())
         # Load default configuration file
-        self.default_arguments = load_configuration(_path)
-        self.merge_configuration(self.default_arguments)
+        default_arguments = load_configuration(_path)
+        self.master_password = default_arguments.get('master_password') or generate_unique_string(20)
+        self.jwt_secret = default_arguments.get('jwt_secret') or generate_unique_string(255)
+        self.merge_configuration(default_arguments)
 
     def merge_configuration(self, config: ArgumentsDict):
         """Merge a configuration dictionary into the arguments."""
@@ -184,13 +185,6 @@ class ParsedArguments:
         """Saves current arguments to the default JSON configuration file."""
         save_configuration(_path, self.arguments)
 
-    # noinspection PyTypedDict
-    def read_default(self, key: str):
-        value = self.arguments.get(key)
-        if not value:
-            return self.default_arguments.get(key)
-        return value
-
 
 class ArgumentParser:
     """Parses and validates command-line arguments."""
@@ -238,8 +232,6 @@ class ArgumentParser:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
         parsed = ParsedArguments(namespace.configuration)
-        master_password = parsed.read_default('master_password') or generate_unique_string(20)
-        jwt_secret = parsed.read_default('jwt_secret') or generate_unique_string(255)
         if parsed.ignore_keys:
             parsed.merge_configuration(vars(namespace))
         else:
@@ -254,9 +246,9 @@ class ArgumentParser:
         if not isinstance(parsed.arguments['addons_paths'], list):
             parsed.arguments['addons_paths'] = [parsed.arguments['addons_paths']]
         if not parsed.arguments.get('master_password'):
-            parsed.arguments['master_password'] = master_password
+            parsed.arguments['master_password'] = parsed.master_password
         if not parsed.arguments.get('jwt_secret'):
-            parsed.arguments['jwt_secret'] = jwt_secret
+            parsed.arguments['jwt_secret'] = parsed.jwt_secret
         if not parsed.arguments['pipeline_interval'] or parsed.arguments['pipeline_interval'] <= 0:
             parsed.arguments['pipeline_interval'] = 1
         if not parsed.arguments['pipeline_origin']:
