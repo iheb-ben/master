@@ -3,9 +3,8 @@ import sys
 import json
 import logging
 from pathlib import Path
-from typing import Dict, Optional, TypedDict, List, Set, Callable
+from typing import Dict, Optional, TypedDict, List, Set, Union
 
-from master.api import classproperty
 from master.tools.enums import Enum
 from master.tools.generator import generate_unique_string
 from master.tools.paths import temporairy_directory
@@ -50,7 +49,7 @@ class ArgumentsDict(TypedDict, total=False):
     master_password: str
     jwt_secret: str
     port: int
-    addons_paths: List[str]
+    addons_paths: Union[List[str], str, None]
     directory: str
     pipeline: bool
     pipeline_mode: str
@@ -68,7 +67,7 @@ class ArgumentsDict(TypedDict, total=False):
     db_mongo_port: int
     db_mongo_user: str
     db_mongo_password: str
-    git: List[Dict[str, str]]
+    git: Union[List[Dict[str, str]], Dict[str, str], None]
     # Computed settings
     logging_level: int
     node_type: str
@@ -100,7 +99,6 @@ def save_configuration(path: Path, config: ArgumentsDict):
         _logger.error(f"Failed to save configuration to {path}: {e}")
 
 
-# noinspection PyTypedDict,PyMethodParameters
 class ParsedArguments:
     """
     Encapsulates parsed command-line arguments and manages configurations.
@@ -110,100 +108,81 @@ class ParsedArguments:
     # noinspection PyTypeChecker
     def __init__(self, configuration_path: Optional[str] = None):
         self._ignore: Set[str] = _unstorable_fields.copy()
-        self.arguments: ArgumentsDict = {}
-
-        # Load configurations from JSON file or temporary directory
+        self.arguments = ArgumentsDict()
+        # Load default configuration file
         self._merge_configuration(load_configuration(_path))
-        self.arguments['addons_paths'] = []
-        self.arguments['git'] = []
+        self.arguments.update({
+            'addons_paths': [],
+            'git': [],
+        })
+        # Load configuration from input JSON file
         if configuration_path:
             config = load_configuration(Path(configuration_path))
+            self.update_configuration(config)
+            # Add key that will be ignored when loading the inputed values from the ArgumentParser
             self._ignore.update(config.keys())
-            self._merge_configuration(config)
-        if not self.arguments.get('git'):
-            self.arguments['git'] = []
-        if not isinstance(self.arguments['git'], list):
-            self.arguments['git'] = [self.arguments['git']]
-        if not self.arguments.get('addons_paths'):
-            self.arguments['addons_paths'] = []
-        if not isinstance(self.arguments['addons_paths'], list):
-            self.arguments['addons_paths'] = [self.arguments['addons_paths']]
-
-    def allow(self, key: str):
-        if key in self._ignore:
-            self._ignore.remove(key)
 
     def _merge_configuration(self, config: ArgumentsDict):
         """Merge a configuration dictionary into the arguments."""
         for key, value in config.items():
-            if key in self.arguments_names:
+            if key in ArgumentsDict.__annotations__.keys():
                 self.arguments.setdefault(key, value)
 
     def update_configuration(self, config: ArgumentsDict):
         """Updates configuration arguments dynamically."""
-        for key in self.arguments_names:
+        for key in ArgumentsDict.__annotations__.keys():
             if key in config and key not in self._ignore:
+                # noinspection PyTypedDict
                 self.arguments[key] = config[key]
 
     def check(self):
         """Validates certain arguments for correctness."""
         # Validate paths
         for path_key in ['log_file']:
+            # noinspection PyTypedDict
             path = self.arguments.get(path_key)
             if path and not Path(str(path)).is_file():
                 raise ValueError(f'Invalid file path for "{path_key}": {path}')
-        for path_key in ['directory']:
-            path = self.arguments.get(path_key)
+        for directory_key in ['directory']:
+            # noinspection PyTypedDict
+            path = self.arguments.get(directory_key)
             if path and not Path(str(path)).is_dir():
-                raise ValueError(f'Invalid directory path for "{path_key}": {path}')
-        for path_key in ['addons_paths']:
-            paths = self.arguments.get(path_key)
-            if not paths:
-                continue
-            # noinspection PyTypeChecker
-            for path in paths:
-                if not Path(str(path)).is_dir():
-                    raise ValueError(f'Invalid directory path for "{path_key}": {path}')
-
+                raise ValueError(f'Invalid directory path for "{directory_key}": {path}')
+        for addons_path_key in ['addons_paths']:
+            # noinspection PyTypedDict
+            paths = self.arguments.get(addons_path_key)
+            if isinstance(paths, list):
+                for path in paths:
+                    if not Path(str(path)).is_dir():
+                        raise ValueError(f'Invalid directory path for "{addons_path_key}": {path}')
         # Validate port ranges
         validate_ports = ['port', 'db_port', 'db_mongo_port']
         if self.arguments['pipeline'] and self.arguments['pipeline_mode'] == PipelineMode.NODE.value:
             validate_ports.append('pipeline_port')
         for port_key in validate_ports:
+            # noinspection PyTypedDict
             port = self.arguments.get(port_key)
             if port and not port_in_range(int(port)):
                 raise ValueError(f'Invalid port for "{port_key}": {port}')
-
         # Validate positive non-null values
-        for key in ['pipeline_interval']:
-            integer = self.arguments.get(key) or -1
+        for integer_key in ['pipeline_interval']:
+            # noinspection PyTypedDict
+            integer = self.arguments.get(integer_key) or 1
             if integer and integer < 0:
-                raise ValueError(f'Parameter "{key}" must be strictly positive number')
-
-        # Validate mandatory values
-        for key in ['master_password']:
-            if not self.arguments.get(key):
-                raise ValueError(f'Missing required parameter "{key}"')
+                raise ValueError(f'Parameter "{integer_key}" must be strictly positive number')
 
     def compute(self):
         """Computes derived settings."""
         if self.arguments.get('pipeline'):
-            self.arguments['node_type'] = self.arguments.get('pipeline_mode')
+            self.arguments['node_type'] = self.arguments.get('pipeline_mode') or 'basic'
         else:
+            self.arguments['node_type'] = 'basic'
+        if self.arguments['node_type'].isspace():
             self.arguments['node_type'] = 'basic'
         if self.arguments['mode'] == Mode.STAGING.value:
             self.arguments['logging_level'] = logging.DEBUG
         else:
             self.arguments['logging_level'] = LoggerType.to_logging_level(self.arguments['log_level'])
-        if not self.arguments['pipeline_interval']:
-            self.arguments['pipeline_interval'] = 1
-        if not self.arguments['pipeline_origin']:
-            self.arguments['pipeline_origin'] = 'localhost'
-
-    @classproperty
-    def arguments_names(cls) -> List[str]:
-        """Retrieves the list of valid argument names from `ArgumentsDict`."""
-        return list(ArgumentsDict.__annotations__.keys())
 
     def save(self):
         """Saves current arguments to the default JSON configuration file."""
@@ -231,7 +210,6 @@ class ArgumentParser:
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
-
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')
@@ -240,7 +218,6 @@ class ArgumentParser:
         pipeline_group.add_argument('--pipeline-origin', type=str, help='Allow origins (default localhost)')
         pipeline_group.add_argument('--pipeline-interval', type=int, default=10, help='Periode (Seconds) of checking the git repositories')
         pipeline_group.add_argument('--pipeline-webhook', action='store_true', default=False, help='Use webhooks instead of custom watcher for any repo changes')
-
         # Database settings
         db_group = self._parser.add_argument_group('Database Configuration', 'Database-related settings')
         db_group.add_argument('--db-name', default='master', help='Database name')
@@ -257,29 +234,42 @@ class ArgumentParser:
     def parse(self) -> ArgumentsDict:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
-        parsed_arguments = _customize_namespace(ParsedArguments(namespace.configuration), namespace)
-        parsed_arguments.update_configuration(vars(namespace))
-        parsed_arguments.check()
-        parsed_arguments.save()
-        parsed_arguments.compute()
-        return parsed_arguments.arguments
-
-
-def _customize_namespace(parsed: ParsedArguments, namespace: argparse.Namespace) -> ParsedArguments:
-    """ Custom logic to manipulate certain values """
-    parsed.allow('master_password')
-    parsed.allow('jwt_secret')
-    generator: Callable = lambda length: generate_unique_string(length, "\"\\/*<>'`^")
-    if not namespace.master_password:
+        parsed = ParsedArguments(namespace.configuration)
+        master_password = parsed.arguments['master_password'] or generate_unique_string(20)
+        jwt_secret = parsed.arguments['jwt_secret'] or generate_unique_string(255)
+        parsed.update_configuration(vars(namespace))
+        # Correct mandatory values
+        if not parsed.arguments.get('git'):
+            parsed.arguments['git'] = []
+        if not isinstance(parsed.arguments['git'], list):
+            parsed.arguments['git'] = [parsed.arguments['git']]
+        if not parsed.arguments.get('addons_paths'):
+            parsed.arguments['addons_paths'] = []
+        if not isinstance(parsed.arguments['addons_paths'], list):
+            parsed.arguments['addons_paths'] = [parsed.arguments['addons_paths']]
         if not parsed.arguments.get('master_password'):
-            namespace.master_password = generator(20)
-        else:
-            namespace.master_password = parsed.arguments['master_password']
-    if not namespace.jwt_secret:
+            parsed.arguments['master_password'] = master_password
         if not parsed.arguments.get('jwt_secret'):
-            namespace.jwt_secret = generator(255)
-        else:
-            namespace.jwt_secret = parsed.arguments['jwt_secret']
-    if not namespace.addons_paths:
-        namespace.addons_paths = []
-    return parsed
+            parsed.arguments['jwt_secret'] = jwt_secret
+        if not parsed.arguments['pipeline_interval'] or parsed.arguments['pipeline_interval'] <= 0:
+            parsed.arguments['pipeline_interval'] = 1
+        if not parsed.arguments['pipeline_origin']:
+            parsed.arguments['pipeline_origin'] = 'localhost'
+        if parsed.arguments['log_file']:
+            _create_file(Path(parsed.arguments['log_file']))
+        if parsed.arguments['directory']:
+            _create_directory(Path(parsed.arguments['directory']))
+        parsed.check()
+        parsed.save()
+        parsed.compute()
+        return parsed.arguments
+
+
+def _create_file(path: Path):
+    if not path.is_file():
+        path.touch()
+
+
+def _create_directory(path: Path):
+    if not path.is_dir():
+        path.mkdir()
