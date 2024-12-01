@@ -103,36 +103,30 @@ class ParsedArguments:
     """
     Encapsulates parsed command-line arguments and manages configurations.
     """
-    __slots__ = ('master_password', 'jwt_secret', 'arguments', 'ignore_keys')
+    __slots__ = ('master_password', 'jwt_secret', 'arguments', '_ignore_keys')
 
     def __init__(self, configuration_path: Optional[str] = None):
-        self.ignore_keys: Set[str] = set()
+        self._ignore_keys: Set[str] = set()
         self.arguments = ArgumentsDict()
         # Load configuration from input JSON file
         if configuration_path:
-            config = load_configuration(Path(configuration_path))
-            self.update_configuration(config)
-            # Add key that will be ignored when loading the inputed values from the ArgumentParser
-            self.ignore_keys.update(config.keys())
+            self.update_configuration(load_configuration(Path(configuration_path)))
         # Load default configuration file
-        default_arguments = load_configuration(_path)
-        self.master_password = default_arguments.get('master_password') or generate_unique_string(20)
-        self.jwt_secret = default_arguments.get('jwt_secret') or generate_unique_string(255)
-        self.merge_configuration(default_arguments)
-
-    def merge_configuration(self, config: ArgumentsDict):
-        """Merge a configuration dictionary into the arguments."""
+        arguments = load_configuration(_path)
+        self.master_password = arguments.get('master_password') or generate_unique_string(20)
+        self.jwt_secret = arguments.get('jwt_secret') or generate_unique_string(255)
         arguments_keys = ArgumentsDict.__annotations__.keys()
-        for key, value in config.items():
+        for key, value in arguments.items():
             if key in arguments_keys:
                 self.arguments.setdefault(key, value)
 
-    def update_configuration(self, config: ArgumentsDict):
+    def update_configuration(self, arguments: ArgumentsDict):
         """Updates configuration arguments dynamically."""
         for key in ArgumentsDict.__annotations__.keys():
-            if key in config and key not in self.ignore_keys and key not in _unstorable_fields:
+            if key in arguments and key not in self._ignore_keys:
                 # noinspection PyTypedDict
-                self.arguments[key] = config[key]
+                self.arguments[key] = arguments[key]
+                self._ignore_keys.add(key)
 
     def check(self):
         """Validates certain arguments for correctness."""
@@ -232,10 +226,7 @@ class ArgumentParser:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
         parsed = ParsedArguments(namespace.configuration)
-        if parsed.ignore_keys:
-            parsed.merge_configuration(vars(namespace))
-        else:
-            parsed.update_configuration(vars(namespace))
+        parsed.update_configuration(vars(namespace))
         # Correct mandatory values
         if not parsed.arguments.get('git'):
             parsed.arguments['git'] = []
