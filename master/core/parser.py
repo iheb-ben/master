@@ -94,7 +94,7 @@ def save_configuration(path: Path, config: ArgumentsDict):
     """Saves arguments to a JSON configuration file."""
     try:
         with open(path, 'w') as file:
-            json.dump({k: v for k, v in config.items() if k not in _unstorable_fields}, file, indent=4)
+            json.dump({k: v for k, v in config.items() if k not in _unstorable_fields}, file, indent=4, sort_keys=True)
     except OSError as e:
         _logger.error(f"Failed to save configuration to {path}: {e}")
 
@@ -103,35 +103,33 @@ class ParsedArguments:
     """
     Encapsulates parsed command-line arguments and manages configurations.
     """
-    __slots__ = ('arguments', '_ignore')
+    __slots__ = ('default_arguments', 'arguments', 'ignore_keys')
 
     # noinspection PyTypeChecker
     def __init__(self, configuration_path: Optional[str] = None):
-        self._ignore: Set[str] = _unstorable_fields.copy()
+        self.ignore_keys: Set[str] = {}
         self.arguments = ArgumentsDict()
-        # Load default configuration file
-        self._merge_configuration(load_configuration(_path))
-        self.arguments.update({
-            'addons_paths': [],
-            'git': [],
-        })
         # Load configuration from input JSON file
         if configuration_path:
             config = load_configuration(Path(configuration_path))
             self.update_configuration(config)
             # Add key that will be ignored when loading the inputed values from the ArgumentParser
-            self._ignore.update(config.keys())
+            self.ignore_keys.update(config.keys())
+        # Load default configuration file
+        self.default_arguments = load_configuration(_path)
+        self.merge_configuration(self.default_arguments)
 
-    def _merge_configuration(self, config: ArgumentsDict):
+    def merge_configuration(self, config: ArgumentsDict):
         """Merge a configuration dictionary into the arguments."""
+        arguments_keys = ArgumentsDict.__annotations__.keys()
         for key, value in config.items():
-            if key in ArgumentsDict.__annotations__.keys():
+            if key in arguments_keys:
                 self.arguments.setdefault(key, value)
 
     def update_configuration(self, config: ArgumentsDict):
         """Updates configuration arguments dynamically."""
         for key in ArgumentsDict.__annotations__.keys():
-            if key in config and key not in self._ignore:
+            if key in config and key not in self.ignore_keys and key not in _unstorable_fields:
                 # noinspection PyTypedDict
                 self.arguments[key] = config[key]
 
@@ -186,6 +184,13 @@ class ParsedArguments:
         """Saves current arguments to the default JSON configuration file."""
         save_configuration(_path, self.arguments)
 
+    # noinspection PyTypedDict
+    def read_default(self, key: str):
+        value = self.arguments.get(key)
+        if not value:
+            return self.default_arguments.get(key)
+        return value
+
 
 class ArgumentParser:
     """Parses and validates command-line arguments."""
@@ -233,9 +238,12 @@ class ArgumentParser:
         """Parses command-line arguments and returns the parsed configuration."""
         namespace = self._parser.parse_args(sys.argv[1:])
         parsed = ParsedArguments(namespace.configuration)
-        master_password = parsed.arguments['master_password'] or generate_unique_string(20)
-        jwt_secret = parsed.arguments['jwt_secret'] or generate_unique_string(255)
-        parsed.update_configuration(vars(namespace))
+        master_password = parsed.read_default('master_password') or generate_unique_string(20)
+        jwt_secret = parsed.read_default('jwt_secret') or generate_unique_string(255)
+        if parsed.ignore_keys:
+            parsed.merge_configuration(vars(namespace))
+        else:
+            parsed.update_configuration(vars(namespace))
         # Correct mandatory values
         if not parsed.arguments.get('git'):
             parsed.arguments['git'] = []
