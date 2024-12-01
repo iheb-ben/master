@@ -177,8 +177,6 @@ class ParsedArguments:
             self.arguments['node_type'] = self.arguments.get('pipeline_mode') or 'basic'
         else:
             self.arguments['node_type'] = 'basic'
-        if self.arguments['node_type'].isspace():
-            self.arguments['node_type'] = 'basic'
         if self.arguments['mode'] == Mode.STAGING.value:
             self.arguments['logging_level'] = logging.DEBUG
         else:
