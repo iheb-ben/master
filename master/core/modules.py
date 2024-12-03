@@ -251,8 +251,8 @@ class Graph:
                 if node in self._collect_all_nodes(dependency):
                     raise ValueError(f'Circular dependency detected in addon "{node.name}": "{dependency.name}" is in the recursion stack.')
 
-    @classmethod
-    def _collect_all_nodes(cls, node: Node) -> List[Node]:
+    @staticmethod
+    def _collect_all_nodes(node: Node) -> List[Node]:
         """
         Collects all nodes reachable from a given node, avoiding duplicates.
         Args:
@@ -271,8 +271,8 @@ class Graph:
                 stack.extend(current_node.children)
         return nodes
 
-    @classmethod
-    def _sort_all_nodes(cls, node: Node) -> Tuple[int, int, int, str]:
+    @staticmethod
+    def _sort_all_nodes(node: Node) -> Tuple[int, int, int, str]:
         """
         Sorting key for ordering nodes.
         Args:
@@ -338,7 +338,7 @@ def load_configurations():
     check_requirements = set()
     for name in configurations:
         requirement_file = configurations[name].location / 'requirements.txt'
-        if str(requirement_file) not in check_requirements:
+        if requirement_file.is_file() and str(requirement_file) not in check_requirements:
             pip.install_requirements(requirement_file, True)
             check_requirements.add(str(requirement_file))
         import_module(name)

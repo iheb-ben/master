@@ -29,7 +29,9 @@ def main() -> None:
             if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
                 manager.add_thread('GIT_MANAGER', repositories.run)
             elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
-                manager.add_thread('GIT_NODE', repositories.run)
+                # TODO: Create a small server that runs and terminates the instance based on the received commands
+                pass
+    # TODO: Create the server then add it to the threads manager
     if manager.threads:
         core.modules.load_configurations()
         for key, name in {
