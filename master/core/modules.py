@@ -211,8 +211,6 @@ class Graph:
                     _logger.warning(f'Ignored invalid module: {module_path.name}')
             if is_empty:
                 _logger.warning(f'No valid modules found in: {addons_path}')
-            else:
-                pip.install_requirements(addons_path / 'requirements.txt')
         base_configuration = self._configurations[base_addon]
         self._nodes: Dict[str, Node] = {base_configuration.name: Node(base_configuration)}
         self._incorrect: List[str] = []
@@ -337,5 +335,10 @@ def import_module(name: str):
 def load_configurations():
     graph = Graph()
     globals()['configurations'] = graph.order_configurations()
+    check_requirements = set()
     for name in configurations:
+        requirement_file = configurations[name].location / 'requirements.txt'
+        if str(requirement_file) not in check_requirements:
+            pip.install_requirements(requirement_file, True)
+            check_requirements.add(str(requirement_file))
         import_module(name)
