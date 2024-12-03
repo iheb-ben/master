@@ -23,8 +23,8 @@ from . import threads
 from . import pem
 from . import jwt
 from . import registry
+from . import system
 from . import git
 from . import modules
 from . import orm
 from . import endpoints
-from . import system

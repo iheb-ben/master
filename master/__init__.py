@@ -31,6 +31,7 @@ def main() -> None:
             elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
                 manager.add_thread('GIT_NODE', repositories.run)
     if manager.threads:
+        core.modules.load_configurations()
         for key, name in {
             'mode': 'Environment',
             'node_type': 'Node Type',

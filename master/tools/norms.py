@@ -18,6 +18,10 @@ def is_field_norm_compliant(field_name: str) -> bool:
     return bool(re.match(r"^(?!_)(?!.*__)[a-z_]+(?<!_)$", field_name))
 
 
+def is_module_norm_compliant(module_name: str):
+    return is_field_norm_compliant(module_name)
+
+
 def is_class_norm_compliant(class_name: str) -> bool:
     """
     Checks if the class name complies with naming conventions:

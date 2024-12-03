@@ -9,7 +9,7 @@ from typing import Union
 def install_requirements(requirement_file_path: Union[str, os.PathLike], required: bool = False):
     _logger = logging.getLogger(__name__)
     file_path = Path(requirement_file_path).absolute().resolve()
-    if file_path.exists() and file_path.is_file():
+    if file_path.is_file():
         try:
             subprocess.run(
                 [sys.executable, '-m', 'pip', 'install', '-r', str(file_path)],
