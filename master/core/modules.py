@@ -117,7 +117,7 @@ def iterate_addons_paths() -> Generator[Path, None, None]:
     elements_found = False
     for path in LastIndexOrderedSet(current_paths):
         addons_path = Path(path)
-        if addons_path.exists() and addons_path.is_dir():
+        if addons_path.is_dir():
             elements_found = True
             yield addons_path
         else:
@@ -183,20 +183,43 @@ class Node:
         return f'Node({self.name})'
 
 
-class Tree:
+class Graph:
     """
     Represents a dependency tree for managing module configurations.
     Attributes:
-        _default (str): The default module name.
-        _modules (Dict[str, Node]): Mapping of module names to their corresponding Node objects.
+        _configurations (Dict[str, Configuration]): All configurations.
+        _nodes (Dict[str, Node]): Mapping of module names to their corresponding Node objects.
         _incorrect (List[str]): List of missing dependencies that could not be resolved.
     """
-    __slots__ = ('_default', '_modules', '_incorrect')
+    __slots__ = ('_configurations', '_nodes', '_incorrect')
 
-    def __init__(self, configuration: Configuration):
-        self._default = configuration.name
-        self._modules: Dict[str, Node] = {configuration.name: Node(configuration)}
+    def __init__(self):
+        self._configurations: Dict[str, Configuration] = {}
+        for addons_path in iterate_addons_paths():
+            is_empty = True
+            for module_path in addons_path.iterdir():
+                if module_path.is_file() or module_path.name.startswith('_'):
+                    continue
+                configuration_data = read_module_configuration(module_path)
+                if configuration_data is not None:
+                    if not is_module_norm_compliant(module_path.name):
+                        raise ValueError(f'Module name "{module_path.name}" is not norm compliant')
+                    configuration_data['path'] = module_path
+                    self._configurations[module_path.name] = Configuration(**configuration_data)
+                    is_empty = False
+                else:
+                    _logger.warning(f'Ignored invalid module: {module_path.name}')
+            if is_empty:
+                _logger.warning(f'No valid modules found in: {addons_path}')
+            else:
+                pip.install_requirements(addons_path / 'requirements.txt')
+        base_configuration = self._configurations[base_addon]
+        self._nodes: Dict[str, Node] = {base_configuration.name: Node(base_configuration)}
         self._incorrect: List[str] = []
+        configurations_list = self._configurations.values()
+        for configuration in configurations_list:
+            self.build_node(configuration)
+        self.build_links(configurations_list)
 
     def build_node(self, configuration: Configuration):
         """
@@ -204,8 +227,8 @@ class Tree:
         Args:
             configuration (Configuration): The module configuration to add.
         """
-        if configuration.name not in self._modules:
-            self._modules[configuration.name] = Node(configuration)
+        if configuration.name not in self._nodes:
+            self._nodes[configuration.name] = Node(configuration)
 
     def build_links(self, current_configurations: Iterable[Configuration]):
         """
@@ -215,16 +238,16 @@ class Tree:
         """
         for configuration in current_configurations:
             for dependency in configuration.depends:
-                if dependency not in self._modules:
+                if dependency not in self._nodes:
                     self._incorrect.append(dependency)
                     try:
                         configuration.depends.remove(dependency)
                     except ValueError:
                         continue
                 else:
-                    self._modules[dependency].add_child(self._modules[configuration.name])
-        for node in self._modules.values():
-            if node.name == self._default:
+                    self._nodes[dependency].add_child(self._nodes[configuration.name])
+        for node in self._nodes.values():
+            if node.name == base_addon:
                 continue
             for dependency in node.children:
                 if node in self._collect_all_nodes(dependency):
@@ -261,30 +284,27 @@ class Tree:
         """
         return node.factor, node.sequence, len(node.parents), node.name
 
-    def order_nodes(self, current_configurations: Dict[str, Configuration]) -> Tuple[List[str], Dict[str, Configuration]]:
+    def order_configurations(self) -> Dict[str, Configuration]:
         """
         Orders nodes based on dependencies and sequence.
-        Args:
-            current_configurations (Dict[str, Configuration]): A mapping of module names to configurations.
-        Returns:
-            - A list of missing dependencies.
-            - An ordered dictionary configurations.
         """
         reversed_depends: Dict[str, List[str]] = {}
         ordered_names: List[str] = []
         ordered_configurations: Dict[str, Configuration] = OrderedDict()
-        for node in sorted(self._collect_all_nodes(self._modules[self._default]), key=self._sort_all_nodes):
-            ordered_configurations[node.name] = current_configurations[node.name]
-            reversed_depends[node.name] = [_node.name for _node in node.children]
+        for node in sorted(self._collect_all_nodes(self._nodes[base_addon]), key=self._sort_all_nodes):
+            ordered_configurations[node.name] = self._configurations[node.name]
+            reversed_depends[node.name] = [child.name for child in node.children]
             ordered_names.append(node.name)
         for configuration in ordered_configurations.values():
             configuration.reversed_depends = reversed_depends[configuration.name]
             configuration.depends = [name for name in ordered_names if name in configuration.depends]
-        return self._incorrect, ordered_configurations
+        if self._incorrect:
+            _logger.warning(f'Missing dependencies {self._incorrect}.')
+        return ordered_configurations
 
     def __repr__(self) -> str:
-        """Returns a string representation of the Tree instance."""
-        return f'Tree({self._default}, {len(self._modules.keys())})'
+        """Returns a string representation of the Graph instance."""
+        return f'Graph({len(self._nodes.keys())})'
 
 
 def import_module(name: str):
@@ -315,33 +335,7 @@ def import_module(name: str):
 
 
 def load_configurations():
-    current_configurations: Dict[str, Configuration] = {}
-    for addons_path in iterate_addons_paths():
-        requirements_file = addons_path / 'requirements.txt'
-        pip.install_requirements(requirements_file)
-        is_empty = True
-        for module_path in addons_path.iterdir():
-            if module_path.is_file() or module_path.name.startswith('_'):
-                continue
-            configuration_data = read_module_configuration(module_path)
-            if configuration_data is not None:
-                if not is_module_norm_compliant(module_path.name):
-                    raise ValueError(f'Module name "{module_path.name}" is not norm compliant')
-                configuration_data['path'] = module_path
-                current_configurations[module_path.name] = Configuration(**configuration_data)
-                is_empty = False
-            else:
-                _logger.warning(f'Ignored invalid module: {module_path.name}')
-        if is_empty:
-            _logger.warning(f'No valid modules found in: {addons_path}')
-    order_tree = Tree(current_configurations[base_addon])
-    configurations_list = current_configurations.values()
-    for configuration in configurations_list:
-        order_tree.build_node(configuration)
-    order_tree.build_links(configurations_list)
-    global configurations
-    incorrect, configurations = order_tree.order_nodes(current_configurations)
-    if incorrect:
-        _logger.warning(f'Missing dependencies {incorrect}.')
+    graph = Graph()
+    globals()['configurations'] = graph.order_configurations()
     for name in configurations:
         import_module(name)
