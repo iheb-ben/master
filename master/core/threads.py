@@ -17,10 +17,10 @@ class ThreadManager:
     A manager to handle threads that run tasks and stop gracefully
     when the main program receives a termination signal.
     """
-    __slots__ = 'threads'
+    __slots__ = '_threads'
 
     def __init__(self):
-        self.threads: List[threading.Thread] = []
+        self._threads: List[threading.Thread] = []
         # Attach signal handlers for SIGINT and SIGTERM
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
@@ -42,14 +42,14 @@ class ThreadManager:
         :param kwargs: Keyword arguments for the target function.
         """
         thread = threading.Thread(name=name, target=target, args=args, kwargs=kwargs)
-        self.threads.append(thread)
+        self._threads.append(thread)
         return thread
 
     def start_all(self):
         """
         Start all managed threads.
         """
-        for thread in self.threads:
+        for thread in self._threads:
             if thread.is_alive():
                 continue
             thread.start()
@@ -61,7 +61,7 @@ class ThreadManager:
                 time.sleep(1)
 
     def is_alive(self):
-        return any(thread.is_alive() for thread in self.threads)
+        return any(thread.is_alive() for thread in self._threads)
 
 
 def worker(func: Callable):

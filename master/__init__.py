@@ -33,9 +33,8 @@ def main() -> None:
     else:
         globals()['server'] = core.server.Server()
     if server:
-        manager.add_thread('SERVER', server.run)
-    if manager.threads:
         core.modules.load_configurations()
+        manager.start_all()
         for key, name in {
             'mode': 'Environment',
             'node_type': 'Node Type',
@@ -44,8 +43,8 @@ def main() -> None:
             'version': 'Version',
         }.items():
             _logger.info(f'{name}: {core.signature[key]}')
-        manager.start_all()
         _logger.info('ERP started')
+        server.run()
         while manager.is_alive():
             time.sleep(1)
         _logger.info('ERP stopped')

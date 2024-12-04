@@ -26,16 +26,16 @@ class Server:
 
     @worker
     def run(self):
-        if self._server:
-            if self._load:
-                self._load_endpoints()
-                self._load = False
-            self._server.handle_request()
-        else:
-            time.sleep(1)
+        if self._load:
+            self._load_endpoints()
+            self._load = False
+        self._server.handle_request()
 
     def _start(self):
-        self._server = make_server('localhost', arguments['port'], self.__call__)
+        self._server = make_server(host='localhost',
+                                   port=arguments['port'],
+                                   app=self.__call__,
+                                   threaded=True)
         # Set a timeout to check for the stop event periodically
         self._server.timeout = 1
 
