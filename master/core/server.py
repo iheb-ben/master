@@ -1,4 +1,3 @@
-# TODO: THIS FILE WILL BE UPDATED AND FIXED ACCORDINGLY
 import threading
 import time
 from werkzeug.wrappers import Request, Response
@@ -8,50 +7,46 @@ from werkzeug.local import Local, LocalProxy
 
 from master.core import arguments
 from master.core.modules import default_installed_modules
+from master.core.registry import ClassManager
 from master.core.threads import worker
+from master.tools.collection import OrderedSet
 
 
 class Server:
-    __slots__ = ('_server', '_load', '_url_map', '_modules')
+    __slots__ = '_server'
+    loading = False
+    modules = OrderedSet()
+    classes = ClassManager([])
 
     def __init__(self):
         self._server = None
-        self._load = True
-        self._modules = set()
-        self._url_map = Map([])
-
-    def _load_endpoints(self):
-        self._modules = default_installed_modules()
-        self._url_map = Map([
-            Rule("/", endpoint="index"),
-            Rule("/hello/<name>", endpoint="greet")
-        ])
 
     @worker
     def run(self):
-        if self._load:
-            self._load_endpoints()
-            self._load = False
         self._server.handle_request()
 
     def _start(self):
+        self.__class__.modules = default_installed_modules()
+        self.__class__.classes = ClassManager(self.modules)
         self._server = make_server(host='localhost',
                                    port=arguments['port'],
                                    app=self.__call__,
                                    threaded=True)
-        # Set a timeout to check for the stop event periodically
-        self._server.timeout = 1
+        # Set a timeout (2 seconds) to check for the stop event periodically
+        self._server.timeout = 2
 
     def dispatch_request(self, request):
-        while self._load:
+        attempt = 60
+        while self.loading and attempt >= 0:
             time.sleep(1)
-        adapter = self._url_map.bind_to_environ(request.environ)
+            attempt -= 1
+        if self.loading:
+            return Response("Server is busy!", status=500, content_type="text/plain")
+        controller = self.classes.Controller()
+        adapter = controller.build_urls(self.modules).bind_to_environ(request.environ)
         try:
             endpoint, values = adapter.match()
-            if endpoint == "index":
-                return Response("Welcome to Werkzeug Server!", content_type="text/plain")
-            elif endpoint == "greet":
-                return Response(f"Hello, {values['name']}!", content_type="text/plain")
+            return getattr(controller, endpoint)(values)
         except Exception as e:
             return Response(f"Error: {e}", status=404, content_type="text/plain")
 

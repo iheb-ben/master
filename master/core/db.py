@@ -375,7 +375,7 @@ def default_installed_modules() -> OrderedSet[str]:
     manager = PostgresManager()
     with manager.admin_connection().cursor() as cursor:
         try:
-            cursor.execute("SELECT key FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequance ASC;")
+            cursor.execute("SELECT key FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
             return OrderedSet([row[0] for row in cursor.fetchall()])
         except (psycopg2.Error, DatabaseSessionError):

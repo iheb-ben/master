@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Type, Any, Dict, List, Optional
+from typing import Type, Any, Dict, List, Optional, Iterable
 from master.api import lazy_classproperty
 from master.tools.methods import call_classmethod
 from master.tools.norms import is_class_norm_compliant
@@ -46,7 +46,7 @@ class ClassManager:
     __slots__ = '_classes'
     _registry: Dict[str, ModuleClassRegistry] = {}
 
-    def __init__(self, modules: List[str]):
+    def __init__(self, modules: Iterable[str]):
         """
         Compiles and merges classes for each meta_path in the registry.
         """
@@ -105,7 +105,7 @@ class ClassManager:
         return type(new_class_name, tuple(base_classes), options or {})
 
     @staticmethod
-    def filter_unique_classes(modules: List[str], registry: ModuleClassRegistry) -> List[Type[Any]]:
+    def filter_unique_classes(modules: Iterable[str], registry: ModuleClassRegistry) -> List[Type[Any]]:
         """
         Filters and deduplicates classes, retaining only the most derived ones.
         """
