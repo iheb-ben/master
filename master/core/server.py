@@ -7,18 +7,21 @@ from werkzeug.routing import Map, Rule
 from werkzeug.local import Local, LocalProxy
 
 from master.core import arguments
+from master.core.modules import default_installed_modules
 from master.core.threads import worker
 
 
 class Server:
-    __slots__ = ('_server', '_load', '_url_map')
+    __slots__ = ('_server', '_load', '_url_map', '_modules')
 
     def __init__(self):
         self._server = None
         self._load = True
+        self._modules = set()
         self._url_map = Map([])
 
     def _load_endpoints(self):
+        self._modules = default_installed_modules()
         self._url_map = Map([
             Rule("/", endpoint="index"),
             Rule("/hello/<name>", endpoint="greet")

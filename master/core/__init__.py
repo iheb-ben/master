@@ -24,6 +24,7 @@ from . import pem
 from . import jwt
 from . import registry
 from . import system
+from . import db
 from . import git
 from . import modules
 from . import orm

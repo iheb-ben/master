@@ -7,9 +7,9 @@ from pathlib import Path
 from typing import Optional, Union, List, Iterable, Dict, Generator, Any, Tuple
 
 from master import pip, addons
-from master.core import arguments
+from master.core import arguments, db
 from master.core.parser import PipelineMode
-from master.tools.collection import LastIndexOrderedSet
+from master.tools.collection import LastIndexOrderedSet, OrderedSet
 from master.tools.enums import Enum
 from master.tools.norms import is_module_norm_compliant
 
@@ -346,3 +346,30 @@ def load_configurations():
             pip.install_requirements(requirement_file, True)
             check_requirements.add(str(requirement_file))
         import_module(name)
+
+
+def check_condition(configuration: Configuration) -> bool:
+    """
+    Checks if a module should be auto-installed based on the pipeline and configuration mode.
+    Args:
+        configuration (Configuration): The module configuration to check.
+    Returns:
+        bool: True if the module should be auto-installed, False otherwise.
+    """
+    if configuration.name == base_addon:
+        return True
+    pipeline_mode = arguments['pipeline']
+    if not pipeline_mode or (pipeline_mode and configuration.mode in [ConfigurationMode.BOTH, ConfigurationMode.PIPELINE]):
+        return configuration.auto_install
+    return False
+
+
+def default_installed_modules() -> OrderedSet[str]:
+    """
+    Retrieves the list of default modules from the database or fallback to local configurations.
+    """
+    installed_modules = db.default_installed_modules()
+    if not installed_modules:
+        _logger.warning('Falling back to local configurations for default modules.')
+        return OrderedSet([name for name in configurations if check_condition(configurations[name])])
+    return installed_modules

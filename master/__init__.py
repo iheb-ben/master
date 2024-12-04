@@ -9,6 +9,7 @@ from . import pip
 
 pip.install_requirements('./requirements.txt', True)
 
+from . import exceptions
 from . import addons
 from . import tools
 from . import api
@@ -33,6 +34,7 @@ def main() -> None:
     else:
         globals()['server'] = core.server.Server()
     if server:
+        core.db.initialization()
         core.modules.load_configurations()
         manager.start_all()
         for key, name in {
