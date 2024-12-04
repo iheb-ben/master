@@ -18,14 +18,17 @@ class Server:
         self._load = True
         self._url_map = Map([])
 
+    def _load_endpoints(self):
+        self._url_map = Map([
+            Rule("/", endpoint="index"),
+            Rule("/hello/<name>", endpoint="greet")
+        ])
+
     @worker
     def run(self):
         if self._server:
             if self._load:
-                self._url_map = Map([
-                    Rule("/", endpoint="index"),
-                    Rule("/hello/<name>", endpoint="greet")
-                ])
+                self._load_endpoints()
                 self._load = False
             self._server.handle_request()
         else:

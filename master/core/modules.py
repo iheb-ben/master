@@ -8,6 +8,7 @@ from typing import Optional, Union, List, Iterable, Dict, Generator, Any, Tuple
 
 from master import pip, addons
 from master.core import arguments
+from master.core.parser import PipelineMode
 from master.tools.collection import LastIndexOrderedSet
 from master.tools.enums import Enum
 from master.tools.norms import is_module_norm_compliant
@@ -84,6 +85,8 @@ class Configuration:
         if self.name != base_addon and base_addon not in self.depends:
             self.depends.insert(0, base_addon)
         if self.name == base_addon:
+            if self.depends:
+                raise ValueError(f'Base addon "{base_addon}" in "{self.location}" cannot depend on other addons.')
             self.depends = []
         self.kwargs = kwargs
 
@@ -214,10 +217,11 @@ class Graph:
         base_configuration = self._configurations[base_addon]
         self._nodes: Dict[str, Node] = {base_configuration.name: Node(base_configuration)}
         self._incorrect: List[str] = []
-        configurations_list = self._configurations.values()
-        for configuration in configurations_list:
-            self.build_node(configuration)
-        self.build_links(configurations_list)
+        if not arguments['pipeline'] or arguments['pipeline_mode'] != PipelineMode.NODE.value:
+            configurations_list = self._configurations.values()
+            for configuration in configurations_list:
+                self.build_node(configuration)
+            self.build_links(configurations_list)
 
     def build_node(self, configuration: Configuration):
         """

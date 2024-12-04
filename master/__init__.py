@@ -21,29 +21,21 @@ manager: Optional[core.threads.ThreadManager] = None
 
 
 def main() -> None:
-    load_modules = False
-    globals().update({
-        'manager': core.threads.ThreadManager(),
-        'server': core.server.Server(),
-    })
+    globals()['manager'] = core.threads.ThreadManager()
     if core.arguments['pipeline']:
-        core.pem.configure()
-        globals()['repositories'] = core.git.GitRepoManager()
-        repositories.configure()
-        if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
-            if not core.arguments['pipeline_webhook']:
+        if core.arguments['pipeline_mode'] in (core.parser.PipelineMode.MANAGER.value, core.parser.PipelineMode.NODE.value):
+            core.pem.configure()
+            globals()['repositories'] = core.git.GitRepoManager()
+            repositories.configure()
+            if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
                 manager.add_thread('GIT_MANAGER', repositories.run)
-            manager.add_thread('MANAGER_SERVER', server.run)
-            load_modules = True
-        elif core.arguments['pipeline_mode'] == core.parser.PipelineMode.NODE.value:
-            # TODO: use a different server to trigger the restart and the shutdown of the instance
-            manager.add_thread('NODE_SERVER', server.run)
+            globals()['server'] = core.server.Server()
     else:
-        manager.add_thread('MAIN_SERVER', server.run)
-        load_modules = True
+        globals()['server'] = core.server.Server()
+    if server:
+        manager.add_thread('SERVER', server.run)
     if manager.threads:
-        if load_modules:
-            core.modules.load_configurations()
+        core.modules.load_configurations()
         for key, name in {
             'mode': 'Environment',
             'node_type': 'Node Type',
@@ -54,9 +46,6 @@ def main() -> None:
             _logger.info(f'{name}: {core.signature[key]}')
         manager.start_all()
         _logger.info('ERP started')
-        if len(manager.threads) == 1:
-            manager.threads[0].join()
-        else:
-            while manager.is_alive():
-                time.sleep(1)
+        while manager.is_alive():
+            time.sleep(1)
         _logger.info('ERP stopped')
