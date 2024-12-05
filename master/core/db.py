@@ -171,7 +171,7 @@ class PostgresManager(BaseClass, Manager):
             _logger.info(f"No connection found for user {user_id}")
 
     @contextmanager
-    def transaction(self, user_id: str) -> Generator[psycopg2.extensions.cursor, None, None]:
+    def transaction(self, user_id: str, commit: bool = False, rollback: bool = False) -> Generator[psycopg2.extensions.cursor, None, None]:
         """Executes a transaction block if the user has a connection."""
         if user_id not in self.connections:
             raise DatabaseSessionError(f"No connection found for user {user_id}")
@@ -181,11 +181,14 @@ class PostgresManager(BaseClass, Manager):
 
         try:
             yield cursor
-            connection.commit()
-        except Exception as e:
-            connection.rollback()
+            if commit:
+                connection.commit()
+        except psycopg2.Error as e:
+            if rollback:
+                connection.rollback()
             _logger.error(f"Transaction for user {user_id} failed: {e}")
-            raise e
+            if not rollback:
+                raise e
         finally:
             cursor.close()
 
