@@ -15,10 +15,14 @@ from . import tools
 from . import api
 from . import core
 
+# Global variables
 _logger = logging.getLogger(__name__)
 server: Optional[core.server.Server] = None
 repositories: Optional[core.git.GitRepoManager] = None
 manager: Optional[core.threads.ThreadManager] = None
+# Global classes
+PostgresManager = core.db.PostgresManager
+MongoDBManager = core.db.MongoDBManager
 
 
 def main() -> None:

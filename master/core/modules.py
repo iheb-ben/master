@@ -9,7 +9,7 @@ from typing import Optional, Union, List, Iterable, Dict, Generator, Any, Tuple
 from master import pip, addons
 from master.core import arguments, db
 from master.core.parser import PipelineMode
-from master.tools.collection import LastIndexOrderedSet, OrderedSet
+from master.tools.collection import LastIndexOrderedSet
 from master.tools.enums import Enum
 from master.tools.norms import is_module_norm_compliant
 
@@ -364,12 +364,12 @@ def check_condition(configuration: Configuration) -> bool:
     return False
 
 
-def default_installed_modules() -> OrderedSet[str]:
+def default_installed_modules() -> List[str]:
     """
     Retrieves the list of default modules from the database or fallback to local configurations.
     """
-    installed_modules = db.default_installed_modules()
+    installed_modules = db.load_installed_modules()
     if not installed_modules:
         _logger.warning('Falling back to local configurations for default modules.')
-        return OrderedSet([name for name in configurations if check_condition(configurations[name])])
-    return installed_modules
+        return [name for name in configurations if check_condition(configurations[name])]
+    return [name for name in configurations if name in installed_modules]

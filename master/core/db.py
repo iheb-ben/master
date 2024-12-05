@@ -10,7 +10,6 @@ from psycopg2 import sql
 from master.core import arguments
 from master.core.registry import BaseClass
 from master.exceptions import DatabaseAccessError, DatabaseSessionError, DatabaseRoleError
-from master.tools.collection import OrderedSet
 
 ROLE_COLLECTION_NAME = "user_roles"  # Collection for storing user roles in MongoDB
 ROLE_TABLE_NAME = "user_roles"  # Table for storing user roles in PostgreSQL
@@ -368,7 +367,7 @@ def initialization():
         _logger.debug(f'Database "{default_db_name}" created successfully in MongoDB.')
 
 
-def default_installed_modules() -> OrderedSet[str]:
+def load_installed_modules() -> List[str]:
     """
     Retrieves the set of default installed modules from the database.
     """
@@ -377,7 +376,7 @@ def default_installed_modules() -> OrderedSet[str]:
         try:
             cursor.execute("SELECT key FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
-            return OrderedSet([row[0] for row in cursor.fetchall()])
+            return [row[0] for row in cursor.fetchall()]
         except (psycopg2.Error, DatabaseSessionError):
             _logger.debug('Could not retrieve default modules from database.')
-            return OrderedSet()
+            return []
