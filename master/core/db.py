@@ -5,6 +5,8 @@ from typing import Optional, Dict, Generator, List, Any
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 import psycopg2
+import psycopg2.extensions
+import psycopg2.errors
 from psycopg2 import sql
 
 from master.core import arguments
@@ -61,15 +63,21 @@ class Manager(ABC):
         pass
 
 
+postgres_admin_connection: Optional[psycopg2.extensions.connection] = None
+
+
 class PostgresManager(BaseClass, Manager):
     __slots__ = ('database_name', 'connections', 'required')
 
     def __init__(self, database_name: Optional[str] = None):
         self.database_name: Optional[str] = database_name
-        self.connections: Dict[str, psycopg2.connection] = {}
-        self.required: List[psycopg2.connection] = []
+        self.connections: Dict[str, psycopg2.extensions.connection] = {}
+        self.required: List[psycopg2.extensions.connection] = []
+        if postgres_admin_connection:
+            self.connections[arguments['db_user']] = postgres_admin_connection
+            self.required.append(postgres_admin_connection)
 
-    def establish_connection(self, username: str, password: str) -> 'psycopg2.connection':
+    def establish_connection(self, username: str, password: str) -> psycopg2.extensions.connection:
         """Establishes and returns a PostgreSQL connection for a specific user."""
         try:
             if username in self.connections:
@@ -85,13 +93,16 @@ class PostgresManager(BaseClass, Manager):
             _logger.error(f"Error connecting to PostgreSQL: {e}")
             raise DatabaseSessionError("Could not establish a database connection.")
 
-    def admin_connection(self) -> 'psycopg2.connection':
+    def admin_connection(self) -> psycopg2.extensions.connection:
         """Internal method to return a connection for role management."""
+        global postgres_admin_connection
         admin_username = arguments['db_user']
         if admin_username in self.connections:
             return self.connections[admin_username]
         connection = self.establish_connection(admin_username, arguments['db_password'])
-        self.required.append(connection)
+        if self.database_name:
+            postgres_admin_connection = connection
+            self.required.append(connection)
         return connection
 
     def create_role(self, admin_user_id: str, target_user_id: str, role: str) -> None:
@@ -192,10 +203,10 @@ class PostgresManager(BaseClass, Manager):
         """Creates a new PostgreSQL database with the given name."""
         manager = cls()
         connection = manager.admin_connection()
-        connection.set_session(autocommit=True)
         try:
             with connection.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name)))
+            connection.commit()
         except psycopg2.errors.DuplicateDatabase:
             pass
 
@@ -218,6 +229,9 @@ def _mongo_db_uri(username: Optional[str] = None, password: Optional[str] = None
     return uri
 
 
+mongo_admin_connection: Optional[MongoClient] = None
+
+
 class MongoDBManager(BaseClass, Manager):
     __slots__ = ('database_name', 'connections', 'required')
 
@@ -227,6 +241,9 @@ class MongoDBManager(BaseClass, Manager):
         self.database_name: Optional[str] = database_name
         self.connections: Dict[str, MongoClient] = {}
         self.required: List[MongoClient] = []
+        if mongo_admin_connection:
+            self.connections[arguments['db_mongo_user']] = mongo_admin_connection
+            self.required.append(mongo_admin_connection)
 
     def establish_connection(self, username: str, password: str) -> MongoClient:
         """Establishes and returns a MongoDB connection for a specific user."""
@@ -242,11 +259,14 @@ class MongoDBManager(BaseClass, Manager):
 
     def admin_connection(self) -> MongoClient:
         """Returns an admin connection for role management."""
+        global mongo_admin_connection
         admin_username = arguments['db_mongo_user']
         if admin_username in self.connections:
             return self.connections[admin_username]
         connection = self.establish_connection(admin_username, arguments['db_mongo_password'])
-        self.required.append(connection)
+        if self.database_name:
+            mongo_admin_connection = connection
+            self.required.append(connection)
         return connection
 
     def create_role(self, admin_user_id: str, target_user_id: str, role: str) -> None:
@@ -371,10 +391,9 @@ def load_installed_modules() -> List[str]:
     """
     Retrieves the set of default installed modules from the database.
     """
-    manager = PostgresManager()
-    with manager.admin_connection().cursor() as cursor:
+    with PostgresManager(arguments['db_name']).admin_connection().cursor() as cursor:
         try:
-            cursor.execute("SELECT key FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
+            cursor.execute("SELECT DISTINCT(key) FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
             return [row[0] for row in cursor.fetchall()]
         except (psycopg2.Error, DatabaseSessionError):

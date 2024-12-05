@@ -63,6 +63,7 @@ class ArgumentsDict(TypedDict, total=False):
     db_user: str
     db_password: str
     db_mongo: bool
+    db_mongo_security_authorization: bool
     db_mongo_host: str
     db_mongo_port: int
     db_mongo_user: str
@@ -217,6 +218,7 @@ class ArgumentParser:
         db_group.add_argument('--db-user', default='postgres', help='Database username')
         db_group.add_argument('--db-password', default='postgres', help='Database user password')
         db_group.add_argument('--db-mongo', action='store_true', help='Enable MongoDB connection')
+        db_group.add_argument('--db-mongo-security-authorization', action='store_true', help='Enable MongoDB authorization')
         db_group.add_argument('--db-mongo-host', default='localhost', help='MongoDB host')
         db_group.add_argument('--db-mongo-port', type=int, default=27017, help='MongoDB port')
         db_group.add_argument('--db-mongo-user', default='mongo', help='MongoDB username')
