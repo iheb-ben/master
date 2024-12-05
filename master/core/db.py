@@ -393,7 +393,7 @@ def load_installed_modules() -> List[str]:
     """
     with PostgresManager(arguments['db_name']).admin_connection().cursor() as cursor:
         try:
-            cursor.execute("SELECT DISTINCT(key) FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
+            cursor.execute("SELECT DISTINCT key, sequence FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
             return [row[0] for row in cursor.fetchall()]
         except (psycopg2.Error, DatabaseSessionError):
