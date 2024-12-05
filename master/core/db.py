@@ -203,10 +203,10 @@ class PostgresManager(BaseClass, Manager):
         """Creates a new PostgreSQL database with the given name."""
         manager = cls()
         connection = manager.admin_connection()
+        connection.autocommit = True
         try:
             with connection.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name)))
-            connection.commit()
         except psycopg2.errors.DuplicateDatabase:
             pass
 
