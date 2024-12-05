@@ -103,6 +103,8 @@ class PostgresManager(BaseClass, Manager):
         if self.database_name:
             postgres_admin_connection = connection
             self.required.append(connection)
+        else:
+            connection.autocommit = True
         return connection
 
     def create_role(self, admin_user_id: str, target_user_id: str, role: str) -> None:
@@ -169,7 +171,7 @@ class PostgresManager(BaseClass, Manager):
             _logger.info(f"No connection found for user {user_id}")
 
     @contextmanager
-    def transaction(self, user_id: str) -> 'Generator[psycopg2.cursor, None, None]':
+    def transaction(self, user_id: str) -> Generator[psycopg2.extensions.cursor, None, None]:
         """Executes a transaction block if the user has a connection."""
         if user_id not in self.connections:
             raise DatabaseSessionError(f"No connection found for user {user_id}")
@@ -203,7 +205,6 @@ class PostgresManager(BaseClass, Manager):
         """Creates a new PostgreSQL database with the given name."""
         manager = cls()
         connection = manager.admin_connection()
-        connection.autocommit = True
         try:
             with connection.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name)))
@@ -391,11 +392,13 @@ def load_installed_modules() -> List[str]:
     """
     Retrieves the set of default installed modules from the database.
     """
-    with PostgresManager(arguments['db_name']).admin_connection().cursor() as cursor:
-        try:
+    manager = PostgresManager(arguments['db_name'])
+    connection = manager.admin_connection()
+    try:
+        with connection.cursor() as cursor:
             cursor.execute("SELECT DISTINCT key, sequence FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
             return [row[0] for row in cursor.fetchall()]
-        except (psycopg2.Error, DatabaseSessionError):
-            _logger.debug('Could not retrieve default modules from database.')
-            return []
+    except (psycopg2.errors.UndefinedTable, DatabaseSessionError):
+        _logger.debug('Could not retrieve default modules from database.')
+        return []
