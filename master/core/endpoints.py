@@ -1,5 +1,6 @@
 from typing import Union, List, Dict, Any, Callable
-from werkzeug.local import LocalProxy, Local
+from werkzeug.local import Local
+from werkzeug.wrappers import Request as _Request
 
 from master.core.registry import BaseClass
 from master.tools.collection import is_complex_iterable
@@ -7,7 +8,12 @@ from master.tools.collection import is_complex_iterable
 # Store methods names with annotation api.route
 methods = {}
 local = Local()
-request = LocalProxy(lambda: local.request)
+
+
+class Request(BaseClass, _Request):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        setattr(local, 'request', self)
 
 
 class Endpoint:

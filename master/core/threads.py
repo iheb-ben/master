@@ -18,6 +18,7 @@ class ThreadManager:
     when the main program receives a termination signal.
     """
     __slots__ = '_threads'
+    allow = threading.Event()
 
     def __init__(self):
         self._threads: List[threading.Thread] = []
@@ -73,7 +74,10 @@ def worker(func: Callable):
             if not started_threads[current]:
                 call_method(self, '_start')
                 started_threads[current] = True
-            func(self, *args, **kwargs)
+            if ThreadManager.allow.is_set():
+                func(self, *args, **kwargs)
+            else:
+                time.sleep(1)
         if started_threads[current]:
             call_method(self, '_destroy')
             started_threads[current] = False

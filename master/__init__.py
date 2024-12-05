@@ -4,6 +4,7 @@ import traceback
 import sys
 import logging
 from typing import Optional
+from werkzeug.local import LocalProxy
 
 from . import pip
 
@@ -19,28 +20,28 @@ from . import core
 _logger = logging.getLogger(__name__)
 server: Optional[core.server.Server] = None
 repositories: Optional[core.git.GitRepoManager] = None
-manager: Optional[core.threads.ThreadManager] = None
-# Global classes
-PostgresManager = core.db.PostgresManager
-MongoDBManager = core.db.MongoDBManager
+thread_manager: Optional[core.threads.ThreadManager] = None
+postgres_manager: Optional[core.db.PostgresManager] = None
+mongo_db_manager: Optional[core.db.MongoDBManager] = None
+request = LocalProxy(lambda: core.endpoints.local.request)
 
 
 def main() -> None:
-    globals()['manager'] = core.threads.ThreadManager()
+    globals()['thread_manager'] = core.threads.ThreadManager()
     if core.arguments['pipeline']:
         if core.arguments['pipeline_mode'] in (core.parser.PipelineMode.MANAGER.value, core.parser.PipelineMode.NODE.value):
             core.pem.configure()
             globals()['repositories'] = core.git.GitRepoManager()
             repositories.configure()
             if core.arguments['pipeline_mode'] == core.parser.PipelineMode.MANAGER.value:
-                manager.add_thread('GIT_MANAGER', repositories.run)
+                thread_manager.add_thread('GIT_MANAGER', repositories.run)
             globals()['server'] = core.server.Server()
     else:
         globals()['server'] = core.server.Server()
     if server:
         core.db.initialization()
         core.modules.load_configurations()
-        manager.start_all()
+        thread_manager.start_all()
         for key, name in {
             'mode': 'Environment',
             'node_type': 'Node Type',
@@ -51,6 +52,6 @@ def main() -> None:
             _logger.info(f'{name}: {core.signature[key]}')
         _logger.info('ERP started')
         server.run()
-        while manager.is_alive():
+        while thread_manager.is_alive():
             time.sleep(1)
         _logger.info('ERP stopped')
