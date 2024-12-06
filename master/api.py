@@ -73,7 +73,7 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
     if not auth:
         auth = 'public'
     if not methods:
-        methods = ['GET', 'POST']
+        methods = ['GET', 'POST', 'HEAD', 'DELETE', 'UPDATE']
     elif not is_complex_iterable(methods):
         methods = [methods.strip().upper()]
     else:
