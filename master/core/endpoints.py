@@ -20,8 +20,8 @@ class Request(BaseClass, _Request):
         self.endpoint: Optional[Endpoint] = None
         setattr(local, 'request', self)
 
-    def raise_exception(self, status, error):
-        return Response(status=status, response=str(error))
+    def build_response(self, status, content):
+        return Response(status=status, response=content)
 
 
 class Endpoint:
@@ -51,15 +51,10 @@ class Endpoint:
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
     def raise_exception(self, status, error):
-        return request.raise_exception(status, error)
+        return request.build_response(status, str(error))
 
     def middleware(self, values: Dict[str, Any]):
-        controller_function: Optional[Callable] = None
-        if request.endpoint and request.endpoint.name:
-            controller_function = getattr(self, request.endpoint.name, None)
-        if not controller_function:
-            return request.raise_exception(500, SystemError('Endpoint not found'))
-        return controller_function(**values)
+        return getattr(self, request.endpoint.name)(**values)
 
     def map_urls(self, modules):
         if arguments['pipeline']:
