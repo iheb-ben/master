@@ -83,6 +83,6 @@ class Server:
     def __call__(self, *args, **kwargs):
         request = classes.Request(*args, **kwargs)
         with self.dispatch_request(request) as response:
-            response_content = response(*args, **kwargs)
+            closing_iterator = response(*args, **kwargs)
         del request
-        return response_content
+        return closing_iterator

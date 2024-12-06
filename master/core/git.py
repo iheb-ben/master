@@ -47,24 +47,27 @@ def _url(path: str, endpoint: str):
         endpoint = endpoint[1:]
     if endpoint.endswith('/'):
         endpoint = endpoint[:-1]
-    query_params = urlencode({'token': token})
-    return f'http://localhost:{arguments["port"]}/pipeline/repository/{project}/{branch}/{endpoint}?{query_params}'
+    return f'http://localhost:{arguments["port"]}/pipeline/git/repository/{project}/{branch}/{endpoint}'
 
 
-def _post_url(url, body) -> None:
+def _post_url(url, body) -> bool:
     try:
-        response = requests.post(url=url, json=body)
+        response = requests.post(url=url, json=body, headers={'Authorization': f'Bearer {token}'})
         response.raise_for_status()
-    except requests.RequestException:
-        pass
+        return True
+    except requests.RequestException as e:
+        _logger.error(f'Server error: {str(e)}')
+        return False
 
 
-def _get_url(url) -> None:
+def _get_url(url) -> bool:
     try:
-        response = requests.get(url=url)
+        response = requests.get(url=url, headers={'Authorization': f'Bearer {token}'})
         response.raise_for_status()
-    except requests.RequestException:
-        pass
+        return True
+    except requests.RequestException as e:
+        _logger.error(f'Server error: {str(e)}')
+        return False
 
 
 # noinspection PyArgumentList
@@ -126,19 +129,25 @@ class GitRepoManager:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
                 if last_commit != new_last_commit:
+                    is_valid = True
                     _logger.debug(f'Changes in [{repo_path}] since last commit {last_commit}:')
                     for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
-                        _post_url(url=_url(repo_path, 'commit/add'), body={
+                        if not _post_url(url=_url(repo_path, 'commit/add'), body={
                             'hexsha': commit.hexsha,
                             'message': commit.message,
                             'author': {
                                 'name': commit.author.name,
                                 'email': commit.author.email,
                             },
-                        })
+                        }):
+                            repo.git.reset('--hard', last_commit)
+                            is_valid = False
+                            break
                         _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
-                    self._last_commits[repo_path] = new_last_commit
-                    _get_url(url=_url(repo_path, 'build'))
+                    if is_valid:
+                        self._last_commits[repo_path] = new_last_commit
+                        if not _get_url(url=_url(repo_path, 'build')):
+                            repo.git.reset('--hard', last_commit)
             except GitCommandError as e:
                 _logger.error(f"Error pulling repo: {e}", exc_info=True)
 

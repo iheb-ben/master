@@ -9,7 +9,7 @@ from werkzeug.local import LocalProxy
 from . import pip
 
 pip.install_requirements('./requirements.txt', True)
-request = LocalProxy(lambda: core.endpoints.local.request)
+request = LocalProxy(lambda: getattr(core.endpoints.local, 'request', None))
 
 from . import exceptions
 from . import addons

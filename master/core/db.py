@@ -169,7 +169,7 @@ class PostgresManager(BaseClass, Manager):
         try:
             manager = cls()
             with manager.admin_connection().cursor() as cursor:
-                cursor.execute("SELECT 1 FROM pg_database WHERE datname = %s;", (database_name,))
+                cursor.execute("SELECT id FROM pg_database WHERE datname = %s;", (database_name,))
                 return cursor.fetchone() is not None
         except (psycopg2.Error, DatabaseSessionError):
             return False
@@ -355,3 +355,18 @@ def load_installed_modules() -> List[str]:
     except (psycopg2.errors.UndefinedTable, DatabaseSessionError):
         _logger.debug('Could not retrieve default modules from database.')
         return []
+
+
+def translate(source: str):
+    if postgres_admin_connection:
+        with postgres_admin_connection.cursor() as cursor:
+            query = sql.SQL("SELECT translation FROM system_translations WHERE source = {} AND language = {} LIMIT 1")
+            language = 'en'
+            from master import request
+            if request:
+                language = request.headers.get('language', 'en')
+            cursor.execute(query, (source, language))
+            translation = cursor.fetchone()
+            if translation is not None:
+                return translation[0]
+    return source
