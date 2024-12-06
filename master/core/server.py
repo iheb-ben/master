@@ -66,5 +66,8 @@ class Server:
             self.__class__.requests_count -= 1
 
     def __call__(self, *args, **kwargs):
-        with self.dispatch_request(classes.Request(*args, **kwargs)) as response:
-            return response(*args, **kwargs)
+        request = classes.Request(*args, **kwargs)
+        with self.dispatch_request(request) as response:
+            response_content = response(*args, **kwargs)
+        del request
+        return response_content

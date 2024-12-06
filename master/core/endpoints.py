@@ -23,10 +23,6 @@ class Request(BaseClass, _Request):
     def raise_exception(self, status, error):
         return Response(status=status, response=str(error))
 
-    def __del__(self):
-        setattr(local, 'request', None)
-        super().__del__()
-
 
 class Endpoint:
     __slots__ = ('name', 'module', 'parameters')
@@ -57,9 +53,12 @@ class Controller(BaseClass):
     def raise_exception(self, status, error):
         return request.raise_exception(status, error)
 
-    # noinspection PyUnusedLocal
     def middleware(self, values: Dict[str, Any]):
-        controller_function: Callable = getattr(self, request.endpoint.name)
+        controller_function: Optional[Callable] = None
+        if request.endpoint and request.endpoint.name:
+            controller_function = getattr(self, request.endpoint.name, None)
+        if not controller_function:
+            return request.raise_exception(500, SystemError('Endpoint not found'))
         return controller_function(**values)
 
     def map_urls(self, modules):
