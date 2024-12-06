@@ -75,11 +75,15 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
     if not methods:
         methods = ['GET', 'POST']
     elif not is_complex_iterable(methods):
-        methods = [methods]
+        methods = [methods.strip().upper()]
+    else:
+        methods = [value.strip().upper() for value in methods]
     if not mode:
         mode = ['instance']
     elif not is_complex_iterable(mode):
-        mode = [mode]
+        mode = [mode.strip().lower()]
+    else:
+        mode = [value.strip().lower() for value in mode]
 
     def _(func: Callable):
         from master.core.endpoints import Endpoint
