@@ -49,20 +49,21 @@ class Server:
         controller = classes.Controller()
         if self.loading:
             yield controller.raise_exception(503, ConnectionAbortedError('Server is busy'))
-        self.__class__.requests_count += 1
-        adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
-        try:
-            endpoint, values = adapter.match()
-            request.endpoint = endpoint
-        except Exception as e:
-            yield controller.raise_exception(404, e)
-            values = {}
-        try:
-            if request.endpoint:
-                yield controller.middleware(values)
-        except Exception as e:
-            yield controller.raise_exception(500, e)
-        self.__class__.requests_count -= 1
+        else:
+            self.__class__.requests_count += 1
+            adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
+            try:
+                endpoint, values = adapter.match()
+                request.endpoint = endpoint
+            except Exception as e:
+                yield controller.raise_exception(404, e)
+                values = {}
+            try:
+                if request.endpoint:
+                    yield controller.middleware(values)
+            except Exception as e:
+                yield controller.raise_exception(500, e)
+            self.__class__.requests_count -= 1
 
     def __call__(self, *args, **kwargs):
         with self.dispatch_request(classes.Request(*args, **kwargs)) as response:
