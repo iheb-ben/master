@@ -25,6 +25,7 @@ class PipelineMode(str, Enum):
     """Enum for defining pipeline modes."""
     NODE = 'node'
     MANAGER = 'manager'
+    INSTANCE = 'instance'
 
 
 class LoggerType(str, Enum):

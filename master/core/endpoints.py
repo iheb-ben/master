@@ -1,4 +1,5 @@
-from typing import Union, List, Dict, Any, Callable, Optional
+from pathlib import Path
+from typing import Union, List, Dict, Any, Callable, Optional, Generator
 from werkzeug.local import Local
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
@@ -12,6 +13,20 @@ from master.tools.collection import is_complex_iterable
 # Store methods names with annotation api.route
 methods = {}
 local = Local()
+
+
+def generate_file_stream(file_path: str, chunk_size: int = 1024) -> Generator[bytes, None, None]:
+    """
+    Generate file content in chunks to stream it efficiently.
+
+    :param file_path: Path to the file to be streamed.
+    :param chunk_size: Size of each chunk in bytes.
+    :yield: Chunk of file content.
+    """
+    addons_path = Path('.').joinpath('master/addons').absolute()
+    with open(addons_path / file_path, 'rb') as file:
+        while chunk := file.read(chunk_size):
+            yield chunk
 
 
 # noinspection PyMethodMayBeStatic
@@ -41,17 +56,18 @@ class Request(BaseClass, _Request):
         localhost_ips = {'127.0.0.1', '::1'}
         return self.get_client_ip() in localhost_ips
 
-    def build_response(self, status: int, content: Optional[object] = None):
-        return Response(status=status, response=content)
+    def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
+        from master.core.server import classes
+        return classes.Response(status=status, response=content, headers=headers, mimetype=mimetype)
 
     def render(self, template_xml_id: str, context: Optional[Dict[str, Any]] = None):
-        response = self.build_response(status=200)
+        response = self.send_response(status=200, mimetype='text/html')
         response.render_template = template_xml_id
         response.template_context = context or {}
         return response
 
 
-class Response(_Response):
+class Response(BaseClass, _Response):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.render_template: Optional[str] = None
@@ -68,9 +84,9 @@ class Endpoint:
     def __init__(self, func: Callable, parameters: Dict[str, Any]):
         self.parameters = parameters
         self.name: str = func.__name__
-        self.module: str = func.__module__
-        if self.module.startswith('master.addons.'):
-            self.module = self.module.split('.')[2]
+        module: str = func.__module__
+        if module.startswith('master.addons.'):
+            self.module = module.split('.')[2]
         else:
             self.module = None
 
@@ -89,12 +105,17 @@ class Endpoint:
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
     def raise_exception(self, status: int, error: Exception):
-        return request.build_response(status, str(error))
+        return request.send_response(status, str(error))
 
     def middleware(self, values: Dict[str, Any]):
         if request.endpoint.name.startswith('_') and not request.is_localhost():
-            return request.build_response(403, AccessDeniedError('Only requests from localhost are allowed to read call this endpoint'))
-        return getattr(self, request.endpoint.name)(**values)
+            return self.raise_exception(403, AccessDeniedError('Only requests from localhost are allowed to read call this endpoint'))
+        response = getattr(self, request.endpoint.name)(**values)
+        if response is None:
+            response = request.send_response()
+        elif not isinstance(response, Response):
+            response = request.send_response(content=response)
+        return response
 
     def map_urls(self, modules):
         if arguments['pipeline']:
