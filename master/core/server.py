@@ -1,5 +1,6 @@
 import time
-from werkzeug.wrappers import Response
+from contextlib import contextmanager
+from werkzeug.routing import Map
 from werkzeug.serving import make_server
 
 from master.core import arguments
@@ -14,6 +15,7 @@ classes = None
 class Server:
     __slots__ = '_server'
     loading = False
+    requests_count = 0
 
     def __init__(self):
         self._server = None
@@ -32,26 +34,36 @@ class Server:
             master.mongo_db_manager = classes.MongoDBManager(arguments['db_name'])
         self._server = make_server(host='localhost',
                                    port=arguments['port'],
-                                   app=self.__call__,
+                                   app=lambda *args, **kwargs: self(*args, **kwargs),
                                    threaded=True)
         # Set a timeout (2 seconds) to check for the stop event periodically
         self._server.timeout = 2
         ThreadManager.allow.set()
 
+    @contextmanager
     def dispatch_request(self, request):
         attempt = 60
         while self.loading and attempt >= 0:
             time.sleep(1)
             attempt -= 1
-        if self.loading:
-            return Response("Server is busy!", status=500, content_type="text/plain")
         controller = classes.Controller()
-        adapter = controller.build_urls(modules).bind_to_environ(request.environ)
+        if self.loading:
+            yield controller.raise_exception(503, ConnectionAbortedError('Server is busy'))
+        self.__class__.requests_count += 1
+        adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
         try:
             endpoint, values = adapter.match()
-            return getattr(controller, endpoint)(values)
+            request.endpoint = endpoint
         except Exception as e:
-            return Response(f"Error: {e}", status=404, content_type="text/plain")
+            yield controller.raise_exception(404, e)
+            values = {}
+        try:
+            if request.endpoint:
+                yield controller.middleware(values)
+        except Exception as e:
+            yield controller.raise_exception(500, e)
+        self.__class__.requests_count -= 1
 
-    def __call__(self, environ, start_response):
-        return self.dispatch_request(classes.Request(environ))(environ, start_response)
+    def __call__(self, *args, **kwargs):
+        with self.dispatch_request(classes.Request(*args, **kwargs)) as response:
+            return response(*args, **kwargs)

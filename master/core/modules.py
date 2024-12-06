@@ -203,6 +203,8 @@ class Graph:
             for module_path in addons_path.iterdir():
                 if module_path.is_file() or module_path.name.startswith('_'):
                     continue
+                if arguments['pipeline'] and arguments['pipeline_mode'] == PipelineMode.NODE.value and module_path.name != base_addon:
+                    continue
                 configuration_data = read_module_configuration(module_path)
                 if configuration_data is not None:
                     if not is_module_norm_compliant(module_path.name):
@@ -217,8 +219,8 @@ class Graph:
         base_configuration = self._configurations[base_addon]
         self._nodes: Dict[str, Node] = {base_configuration.name: Node(base_configuration)}
         self._incorrect: List[str] = []
-        if not arguments['pipeline'] or arguments['pipeline_mode'] != PipelineMode.NODE.value:
-            configurations_list = self._configurations.values()
+        configurations_list = self._configurations.values()
+        if len(configurations_list) > 1:
             for configuration in configurations_list:
                 self.build_node(configuration)
             self.build_links(configurations_list)

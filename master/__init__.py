@@ -9,6 +9,7 @@ from werkzeug.local import LocalProxy
 from . import pip
 
 pip.install_requirements('./requirements.txt', True)
+request = LocalProxy(lambda: core.endpoints.local.request)
 
 from . import exceptions
 from . import addons
@@ -23,7 +24,6 @@ repositories: Optional[core.git.GitRepoManager] = None
 thread_manager: Optional[core.threads.ThreadManager] = None
 postgres_manager: Optional[core.db.PostgresManager] = None
 mongo_db_manager: Optional[core.db.MongoDBManager] = None
-request = LocalProxy(lambda: core.endpoints.local.request)
 
 
 def main() -> None:

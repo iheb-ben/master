@@ -1,6 +1,8 @@
 from typing import Callable, Any, Type, Dict, Optional, Union, List
 import threading
 
+from master.tools.collection import is_complex_iterable
+
 
 # noinspection PyPep8Naming
 class lazy_property:
@@ -67,14 +69,24 @@ class lazy_classproperty(classproperty):
             self._register[func_name] = value
 
 
-def route(urls: Union[str, List[str]], auth: Optional[str] = None):
+def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None):
     if not auth:
         auth = 'public'
+    if not methods:
+        methods = ['GET', 'POST']
+    elif not is_complex_iterable(methods):
+        methods = [methods]
+    if not mode:
+        mode = ['instance']
+    elif not is_complex_iterable(mode):
+        mode = [mode]
 
-    def _(func):
+    def _(func: Callable):
         from master.core.endpoints import Endpoint
         Endpoint.register(urls, func, {
             'auth': auth,
+            'methods': methods,
+            'mode': mode,
         })
         return func
     return _

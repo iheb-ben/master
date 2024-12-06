@@ -1,6 +1,5 @@
 import logging
 from abc import ABC, abstractmethod
-from contextlib import contextmanager
 from typing import Optional, Dict, Generator, List, Any
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
@@ -42,12 +41,6 @@ class Manager(ABC):
     @abstractmethod
     def close_connection(self, *args, **kwargs) -> None:
         """Closes an existing connection for a specified user."""
-        pass
-
-    @contextmanager
-    @abstractmethod
-    def transaction(self, *args, **kwargs) -> 'Generator[Any]':
-        """Executes a transaction block within a context manager."""
         pass
 
     @classmethod
@@ -169,28 +162,6 @@ class PostgresManager(BaseClass, Manager):
                 _logger.info(f"Connection closed for user {user_id}")
         else:
             _logger.info(f"No connection found for user {user_id}")
-
-    @contextmanager
-    def transaction(self, user_id: str, commit: bool = False, rollback: bool = False) -> Generator[psycopg2.extensions.cursor, None, None]:
-        """Executes a transaction block if the user has a connection."""
-        if user_id not in self.connections:
-            raise DatabaseSessionError(f"No connection found for user {user_id}")
-
-        connection = self.connections[user_id]
-        cursor = connection.cursor()
-
-        try:
-            yield cursor
-            if commit:
-                connection.commit()
-        except psycopg2.Error as e:
-            if rollback:
-                connection.rollback()
-            _logger.error(f"Transaction for user {user_id} failed: {e}")
-            if not rollback:
-                raise e
-        finally:
-            cursor.close()
 
     @classmethod
     def check_database_exists(cls, database_name: str) -> bool:
@@ -332,27 +303,6 @@ class MongoDBManager(BaseClass, Manager):
                 _logger.info(f"Connection closed for user {user_id}")
         else:
             _logger.info(f"No connection found for user {user_id}")
-
-    @contextmanager
-    def transaction(self, user_id: str) -> Generator[MongoClient, None, None]:
-        """Executes a transaction block if the user has a connection."""
-        if user_id not in self.connections:
-            raise DatabaseSessionError(f"No connection found for user {user_id}")
-
-        connection = self.connections[user_id]
-        db = connection[self.database_name]
-        session = connection.start_session()
-
-        try:
-            with session.start_transaction():
-                yield db
-                session.commit_transaction()
-        except PyMongoError as e:
-            session.abort_transaction()
-            _logger.error(f"Transaction for user {user_id} failed: {e}")
-            raise e
-        finally:
-            session.end_session()
 
     @classmethod
     def check_database_exists(cls, database_name: str) -> bool:
