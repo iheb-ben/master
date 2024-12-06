@@ -6,6 +6,7 @@ from werkzeug.wrappers import Request as _Request, Response as _Response
 
 from master import request
 from master.core import arguments
+from master.core.db import translate
 from master.core.registry import BaseClass
 from master.exceptions import AccessDeniedError
 from master.tools.collection import is_complex_iterable
@@ -23,8 +24,7 @@ def generate_file_stream(file_path: str, chunk_size: int = 1024) -> Generator[by
     :param chunk_size: Size of each chunk in bytes.
     :yield: Chunk of file content.
     """
-    addons_path = Path('.').joinpath('master/addons').absolute()
-    with open(addons_path / file_path, 'rb') as file:
+    with open(file_path, 'rb') as file:
         while chunk := file.read(chunk_size):
             yield chunk
 
@@ -105,7 +105,7 @@ class Endpoint:
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
     def raise_exception(self, status: int, error: Exception):
-        return request.send_response(status, str(error))
+        return request.send_response(status, translate(str(error)))
 
     def middleware(self, values: Dict[str, Any]):
         if request.endpoint.name.startswith('_') and not request.is_localhost():

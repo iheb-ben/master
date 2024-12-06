@@ -360,13 +360,16 @@ def load_installed_modules() -> List[str]:
 def translate(source: str):
     if postgres_admin_connection:
         with postgres_admin_connection.cursor() as cursor:
-            query = sql.SQL("SELECT translation FROM system_translations WHERE source = {} AND language = {} LIMIT 1")
-            language = 'en'
-            from master import request
-            if request:
-                language = request.headers.get('language', 'en')
-            cursor.execute(query, (source, language))
-            translation = cursor.fetchone()
-            if translation is not None:
-                return translation[0]
+            try:
+                query = sql.SQL("SELECT translation FROM system_translations WHERE source = {} AND language = {} LIMIT 1")
+                language = 'en'
+                from master import request
+                if request:
+                    language = request.headers.get('language', 'en')
+                cursor.execute(query, (source, language))
+                translation = cursor.fetchone()
+                if translation is not None:
+                    return translation[0]
+            except psycopg2.errors.UndefinedTable:
+                pass
     return source
