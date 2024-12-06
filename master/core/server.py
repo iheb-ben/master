@@ -1,15 +1,29 @@
+import logging
 import time
 from contextlib import contextmanager
+from typing import Optional, List
 from werkzeug.routing import Map
-from werkzeug.serving import make_server
+from werkzeug.serving import make_server, WSGIRequestHandler
 
 from master.core import arguments
+from master.core.endpoints import Controller
 from master.core.modules import default_installed_modules
 from master.core.registry import ClassManager
 from master.core.threads import worker, ThreadManager
 
-modules = []
-classes = None
+_logger = logging.getLogger(__name__)
+modules: List[str] = []
+classes: Optional[ClassManager] = None
+controller: Optional[Controller] = None
+
+
+class RequestHandler(WSGIRequestHandler):
+    def log_request(self, code='*', size='*'):
+        remote_addr = self.client_address[0]  # Client's IP address
+        method = self.command  # HTTP method (e.g., GET, POST)
+        path = self.path  # Requested URL path
+        http_version = self.request_version  # HTTP version
+        _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code} - {size}')
 
 
 class Server:
@@ -25,9 +39,10 @@ class Server:
         self._server.handle_request()
 
     def _start(self):
-        global modules, classes
+        global modules, classes, controller
         modules = default_installed_modules()
         classes = ClassManager(modules)
+        controller = classes.Controller()
         import master
         master.postgres_manager = classes.PostgresManager(arguments['db_name'])
         if arguments['db_mongo']:
@@ -35,6 +50,7 @@ class Server:
         self._server = make_server(host='localhost',
                                    port=arguments['port'],
                                    app=lambda *args, **kwargs: self(*args, **kwargs),
+                                   request_handler=RequestHandler,
                                    threaded=True)
         # Set a timeout (2 seconds) to check for the stop event periodically
         self._server.timeout = 2
@@ -46,7 +62,6 @@ class Server:
         while self.loading and attempt >= 0:
             time.sleep(1)
             attempt -= 1
-        controller = classes.Controller()
         if self.loading:
             yield controller.raise_exception(503, ConnectionAbortedError('Server is busy'))
         else:
