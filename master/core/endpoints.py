@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator
 from werkzeug.local import Local
@@ -58,6 +59,15 @@ class Request(BaseClass, _Request):
         if signature['public_ip']:
             localhost_ips.add(signature['public_ip'])
         return self.get_client_ip() in localhost_ips
+
+    def read_content(self) -> dict:
+        if self.method == 'POST':
+            # noinspection PyBroadException
+            try:
+                return json.loads(self.data.decode('utf-8'))
+            except Exception:
+                return {}
+        return {}
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes

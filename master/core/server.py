@@ -76,6 +76,7 @@ class Server:
                 values = {}
             try:
                 if request.endpoint:
+                    values.update(request.read_content())
                     yield controller.middleware(values)
             except Exception as e:
                 yield controller.raise_exception(500, e)
