@@ -15,7 +15,7 @@ class Main(Controller):
             return request.send_response(
                 content=generate_file_stream(file_path),
                 mimetype='application/octet-stream',
-                headers={'Content-Disposition': f'attachment; filename={secure_filename(path.name)}'})
+                headers={'Content-Disposition': f'attachment;filename={secure_filename(path.name)}'})
         return self.raise_exception(404, FileNotFoundError('File not found'))
 
     @route('/favicon.ico', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value])
@@ -24,12 +24,11 @@ class Main(Controller):
 
     @route('/static/<path:file_path>', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value])
     def static_files(self, file_path: str):
-        not_found = self.raise_exception(404, FileNotFoundError('File not found'))
         file_path_elements = file_path and file_path.split('/') or []
         if len(file_path_elements) < 2:
-            return not_found
+            return self.raise_exception(400, ValueError('Incorrect file path'))
         addon_name = file_path_elements[0]
         if addon_name not in configurations:
-            return not_found
+            return self.raise_exception(404, FileNotFoundError('File not found'))
         file_path = configurations[addon_name].path / 'static' / '/'.join(file_path_elements[1:])
         return self._return_resource(str(file_path))

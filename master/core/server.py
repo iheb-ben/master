@@ -6,6 +6,7 @@ from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
 from master.core import arguments
+from master.core.db import postgres_admin_connection, mongo_admin_connection
 from master.core.endpoints import Controller
 from master.core.modules import default_installed_modules
 from master.core.registry import ClassManager
@@ -55,6 +56,13 @@ class Server:
         # Set a timeout (2 seconds) to check for the stop event periodically
         self._server.timeout = 2
         ThreadManager.allow.set()
+
+    # noinspection PyMethodMayBeStatic
+    def _destroy(self):
+        if postgres_admin_connection:
+            postgres_admin_connection.close()
+        if mongo_admin_connection:
+            mongo_admin_connection.close()
 
     @contextmanager
     def dispatch_request(self, request):

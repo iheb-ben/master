@@ -1,6 +1,5 @@
 import threading
 from collections import OrderedDict
-from functools import wraps
 from urllib.parse import quote, urlencode
 from pathlib import Path
 from shutil import rmtree
@@ -16,6 +15,7 @@ for logger_name in ['urllib3.connectionpool', 'git', 'git.cmd', 'git.repo.base']
 import requests
 from git import Repo, GitCommandError
 
+from master.api import check_lock
 from master.core import arguments, signature
 from master.core.jwt import generate_jwt
 from master.core.threads import worker
@@ -27,16 +27,6 @@ token = generate_jwt(payload=signature, expiration_minutes=0)
 directory = Path(arguments['directory']) / 'repositories'
 if not directory.exists():
     directory.mkdir()
-
-
-def _check_lock(func: Callable):
-    @wraps(func)
-    def _wrapper(self, *args, **kwargs):
-        if not hasattr(self, '_lock'):
-            raise AttributeError('Instance must have "_lock" attribute for thread safety.')
-        with getattr(self, '_lock'):
-            return func(self, *args, **kwargs)
-    return _wrapper
 
 
 def _url(path: str, endpoint: str):
@@ -80,7 +70,7 @@ class GitRepoManager:
         self._lock = threading.RLock()  # Global lock
         self._last_commits: Dict[str, str] = {}
 
-    @_check_lock
+    @check_lock
     def clone(self, url: str, path: str) -> None:
         """Clone a repository to a specified path."""
         try:
@@ -100,7 +90,7 @@ class GitRepoManager:
         except GitCommandError as e:
             _logger.error(f"Error cloning repo: {e}")
 
-    @_check_lock
+    @check_lock
     def _check_repo_lock(self, repo_path: str):
         return self._repo_locks.get(repo_path)
 
@@ -166,7 +156,7 @@ class GitRepoManager:
             except GitCommandError as e:
                 _logger.error(f"Error during commit and push: {e}", exc_info=True)
 
-    @_check_lock
+    @check_lock
     def delete(self, repo_path: str) -> None:
         """Remove repo from manager."""
         if repo_path not in self.repos:
@@ -180,7 +170,7 @@ class GitRepoManager:
             del self._last_commits[repo_path]
             rmtree(repo_path)
 
-    @_check_lock
+    @check_lock
     def _paths(self) -> List[str]:
         return [path for path in self.repos.keys()]
 

@@ -1,4 +1,7 @@
+import datetime
 import logging
+import threading
+import uuid
 from abc import ABC, abstractmethod
 from typing import Optional, Dict, Generator, List, Any
 from pymongo import MongoClient
@@ -8,6 +11,7 @@ import psycopg2.extensions
 import psycopg2.errors
 from psycopg2 import sql
 
+from master.api import check_lock
 from master.core import arguments
 from master.core.registry import BaseClass
 from master.exceptions import DatabaseAccessError, DatabaseSessionError, DatabaseRoleError
@@ -19,7 +23,7 @@ _logger = logging.getLogger(__name__)
 
 class Manager(ABC):
     @abstractmethod
-    def admin_connection(self, *args, **kwargs) -> 'Any':
+    def admin_connection(self, *args, **kwargs) -> Any:
         """Returns a connection with administrative privileges."""
         pass
 
@@ -29,18 +33,23 @@ class Manager(ABC):
         pass
 
     @abstractmethod
-    def get_role(self, *args, **kwargs) -> 'Any':
+    def get_role(self, *args, **kwargs) -> Any:
         """Fetches the role of a specified user."""
         pass
 
     @abstractmethod
-    def create_connection(self, *args, **kwargs) -> 'Any':
+    def create_connection(self, *args, **kwargs) -> Any:
         """Creates a new connection if permissions are met."""
         pass
 
     @abstractmethod
     def close_connection(self, *args, **kwargs) -> None:
         """Closes an existing connection for a specified user."""
+        pass
+
+    @abstractmethod
+    def close(self, *args, **kwargs) -> None:
+        """Closes all existing connection."""
         pass
 
     @classmethod
@@ -60,7 +69,7 @@ postgres_admin_connection: Optional[psycopg2.extensions.connection] = None
 
 
 class PostgresManager(BaseClass, Manager):
-    __slots__ = ('database_name', 'connections', 'required')
+    __slots__ = ('database_name', 'connections', 'required', '_lock')
 
     def __init__(self, database_name: Optional[str] = None):
         self.database_name: Optional[str] = database_name
@@ -69,7 +78,9 @@ class PostgresManager(BaseClass, Manager):
         if postgres_admin_connection:
             self.connections[arguments['db_user']] = postgres_admin_connection
             self.required.append(postgres_admin_connection)
+        self._lock = threading.RLock()
 
+    @check_lock
     def establish_connection(self, username: str, password: str) -> psycopg2.extensions.connection:
         """Establishes and returns a PostgreSQL connection for a specific user."""
         try:
@@ -104,12 +115,10 @@ class PostgresManager(BaseClass, Manager):
         """Allows an admin to assign a role to a user."""
         if not self.is_admin(admin_user_id):
             raise DatabaseAccessError("Only admins can create roles.")
-
         connection = self.admin_connection()
         cursor = connection.cursor()
         try:
-            query = sql.SQL("INSERT INTO {table} (user_id, role) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET role = %s").format(
-                table=sql.Identifier(ROLE_TABLE_NAME))
+            query = sql.SQL("INSERT INTO {table} (user_id, role) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET role = %s").format(table=sql.Identifier(ROLE_TABLE_NAME))
             cursor.execute(query, (target_user_id, role, role))
             connection.commit()
             _logger.info(f"Role '{role}' assigned to user {target_user_id} by admin {admin_user_id}")
@@ -125,8 +134,7 @@ class PostgresManager(BaseClass, Manager):
         connection = self.admin_connection()
         cursor = connection.cursor()
         try:
-            query = sql.SQL("SELECT role FROM {table} WHERE user_id = %s").format(
-                table=sql.Identifier(ROLE_TABLE_NAME))
+            query = sql.SQL("SELECT role FROM {table} WHERE user_id = %s").format(table=sql.Identifier(ROLE_TABLE_NAME))
             cursor.execute(query, (user_id,))
             result = cursor.fetchone()
             return result[0] if result else None
@@ -144,13 +152,13 @@ class PostgresManager(BaseClass, Manager):
         """Creates a new PostgreSQL connection if the user is an admin."""
         if not self.is_admin(user_id):
             raise DatabaseAccessError("Only admins can create connections.")
-
         if user_id not in self.connections:
             self.connections[user_id] = self.establish_connection(user_id, password)
             _logger.info(f"Connection created for admin user {user_id}")
         else:
             _logger.info(f"Connection for user {user_id} already exists")
 
+    @check_lock
     def close_connection(self, user_id: str) -> None:
         """Closes a user's connection."""
         if user_id in self.connections:
@@ -166,13 +174,13 @@ class PostgresManager(BaseClass, Manager):
     @classmethod
     def check_database_exists(cls, database_name: str) -> bool:
         """Checks if a PostgreSQL database exists by querying pg_database."""
-        try:
-            manager = cls()
-            with manager.admin_connection().cursor() as cursor:
-                cursor.execute("SELECT id FROM pg_database WHERE datname = %s;", (database_name,))
-                return cursor.fetchone() is not None
-        except (psycopg2.Error, DatabaseSessionError):
-            return False
+        manager = cls()
+        connection = manager.admin_connection()
+        with connection.cursor() as cursor:
+            cursor.execute(sql.SQL('SELECT 1 FROM pg_database WHERE datname = %s'), (database_name,))
+            result = cursor.fetchone() is not None
+        manager.close()
+        return result
 
     @classmethod
     def create_database(cls, database_name: str) -> None:
@@ -183,10 +191,13 @@ class PostgresManager(BaseClass, Manager):
             with connection.cursor() as cursor:
                 cursor.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(database_name)))
         except psycopg2.errors.DuplicateDatabase:
-            pass
+            connection.rollback()
+        finally:
+            manager.close()
 
-    def __del__(self):
-        for user_id in self.connections:
+    @check_lock
+    def close(self):
+        for user_id in set(self.connections.keys()):
             self.close_connection(user_id)
 
 
@@ -208,7 +219,7 @@ mongo_admin_connection: Optional[MongoClient] = None
 
 
 class MongoDBManager(BaseClass, Manager):
-    __slots__ = ('database_name', 'connections', 'required')
+    __slots__ = ('database_name', 'connections', 'required', '_lock')
 
     DEFAULT_COLLECTION_NAME = 'documents'
 
@@ -219,7 +230,9 @@ class MongoDBManager(BaseClass, Manager):
         if mongo_admin_connection:
             self.connections[arguments['db_mongo_user']] = mongo_admin_connection
             self.required.append(mongo_admin_connection)
+        self._lock = threading.RLock()
 
+    @check_lock
     def establish_connection(self, username: str, password: str) -> MongoClient:
         """Establishes and returns a MongoDB connection for a specific user."""
         try:
@@ -248,17 +261,11 @@ class MongoDBManager(BaseClass, Manager):
         """Assigns a role to a user if the requester is an admin."""
         if not self.is_admin(admin_user_id):
             raise DatabaseAccessError("Only admins can create roles.")
-
         connection = self.admin_connection()
         db = connection[self.database_name]
         roles_collection = db[ROLE_COLLECTION_NAME]
-
         try:
-            roles_collection.update_one(
-                {'user_id': target_user_id},
-                {'$set': {'role': role}},
-                upsert=True
-            )
+            roles_collection.update_one({'user_id': target_user_id}, {'$set': {'role': role}}, upsert=True)
             _logger.info(f"Role '{role}' assigned to user {target_user_id} by admin {admin_user_id}")
         except PyMongoError as e:
             _logger.error(f"Failed to assign role: {e}", exc_info=True)
@@ -269,7 +276,6 @@ class MongoDBManager(BaseClass, Manager):
         connection = self.admin_connection()
         db = connection[self.database_name]
         roles_collection = db[ROLE_COLLECTION_NAME]
-
         try:
             role_data = roles_collection.find_one({'user_id': user_id})
             return role_data['role'] if role_data else None
@@ -285,13 +291,13 @@ class MongoDBManager(BaseClass, Manager):
         """Creates a new MongoDB connection if the user is an admin."""
         if not self.is_admin(user_id):
             raise DatabaseAccessError("Only admins can create connections.")
-
         if user_id not in self.connections:
             self.connections[user_id] = self.establish_connection(user_id, password)
             _logger.info(f"Connection created for admin user {user_id}")
         else:
             _logger.info(f"Connection for user {user_id} already exists")
 
+    @check_lock
     def close_connection(self, user_id: str) -> None:
         """Closes a user's connection."""
         if user_id in self.connections:
@@ -307,13 +313,17 @@ class MongoDBManager(BaseClass, Manager):
     @classmethod
     def check_database_exists(cls, database_name: str) -> bool:
         """Checks if a MongoDB database exists."""
+        manager = cls()
+        client = manager.admin_connection()
+        result = False
         try:
-            manager = cls()
-            client = manager.admin_connection()
             database_list = client.list_database_names()
-            return database_name in database_list
-        except (PyMongoError, DatabaseSessionError):
-            return False
+            result = database_name in database_list
+        except PyMongoError:
+            pass
+        finally:
+            manager.close()
+        return result
 
     @classmethod
     def create_database(cls, database_name: str) -> None:
@@ -322,9 +332,11 @@ class MongoDBManager(BaseClass, Manager):
         client = manager.admin_connection()
         # In MongoDB, databases are created lazily. Accessing a collection creates the DB.
         client[database_name].create_collection(cls.DEFAULT_COLLECTION_NAME)
+        manager.close()
 
-    def __del__(self):
-        for user_id in self.connections:
+    @check_lock
+    def close(self):
+        for user_id in set(self.connections.keys()):
             self.close_connection(user_id)
 
 
@@ -345,23 +357,30 @@ def load_installed_modules() -> List[str]:
     """
     Retrieves the set of default installed modules from the database.
     """
+    required_modules = []
     manager = PostgresManager(arguments['db_name'])
     connection = manager.admin_connection()
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT DISTINCT key, sequence FROM module_module WHERE state IN ('installed', 'to_update') ORDER BY sequence ASC;")
             _logger.debug('Retrieved installed modules from the database.')
-            return [row[0] for row in cursor.fetchall()]
-    except (psycopg2.errors.UndefinedTable, DatabaseSessionError):
+            required_modules = [row[0] for row in cursor.fetchall()]
+    except psycopg2.errors.UndefinedTable:
         connection.rollback()
         _logger.debug('Could not retrieve default modules from database.')
-        return []
+    finally:
+        manager.close()
+    return required_modules
 
 
 def translate(source: str):
     if postgres_admin_connection:
+        savepoint_name = None
         with postgres_admin_connection.cursor() as cursor:
             try:
+                _savepoint_name = 'savepoint_' + uuid.uuid4().hex + '_TR'
+                cursor.execute(f'SAVEPOINT "{_savepoint_name}"')
+                savepoint_name = _savepoint_name
                 query = sql.SQL('SELECT translation FROM system_translations WHERE source = %s AND language = %s LIMIT 1')
                 language = 'en'
                 from master import request
@@ -369,8 +388,10 @@ def translate(source: str):
                     language = request.headers.get('language', 'en')
                 cursor.execute(query, (source, language))
                 translation = cursor.fetchone()
+                cursor.execute(f'RELEASE SAVEPOINT "{savepoint_name}"')
                 if translation:
                     return translation[0]
             except psycopg2.errors.UndefinedTable:
-                postgres_admin_connection.rollback()
+                if savepoint_name:
+                    cursor.execute(f'ROLLBACK TO SAVEPOINT "{savepoint_name}"')
     return source
