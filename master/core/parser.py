@@ -206,7 +206,7 @@ class ArgumentParser:
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')
-        pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode], default=PipelineMode.MANAGER.value, help='Pipeline mode')
+        pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode if e != PipelineMode.INSTANCE], default=PipelineMode.MANAGER.value, help='Pipeline mode')
         pipeline_group.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
         pipeline_group.add_argument('--pipeline-origin', type=str, help='Allow origins (default localhost)')
         pipeline_group.add_argument('--pipeline-interval', type=int, default=10, help='Periode (Seconds) of checking the git repositories')

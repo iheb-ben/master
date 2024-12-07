@@ -7,6 +7,7 @@ from werkzeug.wrappers import Request as _Request, Response as _Response
 from master import request
 from master.core import arguments
 from master.core.db import translate
+from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
 from master.exceptions import AccessDeniedError
 from master.tools.collection import is_complex_iterable
@@ -121,7 +122,7 @@ class Controller(BaseClass):
         if arguments['pipeline']:
             endpoint_type = arguments['pipeline_mode']
         else:
-            endpoint_type = 'instance'
+            endpoint_type = PipelineMode.INSTANCE.value
         urls = []
         for url, endpoint in methods.items():
             endpoint_types: List[str] = endpoint.parameters['mode']
