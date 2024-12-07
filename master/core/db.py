@@ -159,10 +159,10 @@ class PostgresManager(BaseClass, Manager):
             _logger.info(f"Connection for user {user_id} already exists")
 
     @check_lock
-    def close_connection(self, user_id: str) -> None:
+    def close_connection(self, user_id: str, force: bool = False) -> None:
         """Closes a user's connection."""
         if user_id in self.connections:
-            if self.connections[user_id] in self.required:
+            if self.connections[user_id] in self.required and not force:
                 _logger.warning(f"Cannot close required connection {user_id}")
             else:
                 self.connections[user_id].close()
@@ -196,9 +196,9 @@ class PostgresManager(BaseClass, Manager):
             manager.close()
 
     @check_lock
-    def close(self):
+    def close(self, force: bool = False):
         for user_id in set(self.connections.keys()):
-            self.close_connection(user_id)
+            self.close_connection(user_id=user_id, force=force)
 
 
 def _mongo_db_uri(username: Optional[str] = None, password: Optional[str] = None, database_name: Optional[str] = None) -> str:
@@ -298,10 +298,10 @@ class MongoDBManager(BaseClass, Manager):
             _logger.info(f"Connection for user {user_id} already exists")
 
     @check_lock
-    def close_connection(self, user_id: str) -> None:
+    def close_connection(self, user_id: str, force: bool = False) -> None:
         """Closes a user's connection."""
         if user_id in self.connections:
-            if self.connections[user_id] in self.required:
+            if self.connections[user_id] in self.required and not force:
                 _logger.warning(f"Cannot close required connection {user_id}")
             else:
                 self.connections[user_id].close()
@@ -335,9 +335,9 @@ class MongoDBManager(BaseClass, Manager):
         manager.close()
 
     @check_lock
-    def close(self):
+    def close(self, force: bool = False):
         for user_id in set(self.connections.keys()):
-            self.close_connection(user_id)
+            self.close_connection(user_id=user_id, force=force)
 
 
 def initialization():

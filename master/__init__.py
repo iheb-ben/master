@@ -54,4 +54,8 @@ def main() -> None:
         server.run()
         while thread_manager.is_alive():
             time.sleep(1)
+        if postgres_manager:
+            postgres_manager.close(True)
+        if mongo_db_manager:
+            mongo_db_manager.close(True)
         _logger.info('ERP stopped')

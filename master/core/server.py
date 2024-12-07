@@ -57,13 +57,6 @@ class Server:
         self._server.timeout = 2
         ThreadManager.allow.set()
 
-    # noinspection PyMethodMayBeStatic
-    def _destroy(self):
-        if postgres_admin_connection:
-            postgres_admin_connection.close()
-        if mongo_admin_connection:
-            mongo_admin_connection.close()
-
     @contextmanager
     def dispatch_request(self, request):
         attempt = 60
