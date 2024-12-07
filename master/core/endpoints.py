@@ -5,7 +5,7 @@ from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
 
 from master import request
-from master.core import arguments
+from master.core import arguments, signature
 from master.core.db import translate
 from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
@@ -55,6 +55,8 @@ class Request(BaseClass, _Request):
         Check if the IP address is localhost.
         """
         localhost_ips = {'127.0.0.1', '::1'}
+        if signature['public_ip']:
+            localhost_ips.add(signature['public_ip'])
         return self.get_client_ip() in localhost_ips
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
