@@ -1,15 +1,9 @@
-from pathlib import Path
-from werkzeug.utils import secure_filename
-
-from master import request
 from master.api import route
-from master.core.endpoints import Controller, generate_file_stream
-from master.core.modules import configurations, base_addon
+from master.core.endpoints import Controller
 from master.core.parser import PipelineMode
 
 
-class Pipeline(Controller):
-
+class Main(Controller):
     @route('/pipeline/git/repository/<string:project>/<string:branch>/build', methods='GET', mode=PipelineMode.MANAGER.value)
     def _pipeline_build_project(self, project: str, branch: str):
         pass
