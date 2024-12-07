@@ -113,7 +113,7 @@ class Controller(BaseClass):
         response = getattr(self, request.endpoint.name)(**values)
         if response is None:
             response = request.send_response()
-        elif not isinstance(response, Response):
+        elif not isinstance(response, _Response):
             response = request.send_response(content=response)
         return response
 
