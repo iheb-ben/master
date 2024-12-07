@@ -186,8 +186,8 @@ class PostgresManager(BaseClass, Manager):
             pass
 
     def __del__(self):
-        for connection in self.connections.values():
-            connection.close()
+        for user_id in self.connections:
+            self.close_connection(user_id)
 
 
 def _mongo_db_uri(username: Optional[str] = None, password: Optional[str] = None, database_name: Optional[str] = None) -> str:
@@ -324,8 +324,8 @@ class MongoDBManager(BaseClass, Manager):
         client[database_name].create_collection(cls.DEFAULT_COLLECTION_NAME)
 
     def __del__(self):
-        for connection in self.connections.values():
-            connection.close()
+        for user_id in self.connections:
+            self.close_connection(user_id)
 
 
 def initialization():
@@ -353,6 +353,7 @@ def load_installed_modules() -> List[str]:
             _logger.debug('Retrieved installed modules from the database.')
             return [row[0] for row in cursor.fetchall()]
     except (psycopg2.errors.UndefinedTable, DatabaseSessionError):
+        connection.rollback()
         _logger.debug('Could not retrieve default modules from database.')
         return []
 
@@ -361,15 +362,15 @@ def translate(source: str):
     if postgres_admin_connection:
         with postgres_admin_connection.cursor() as cursor:
             try:
-                query = sql.SQL("SELECT translation FROM system_translations WHERE source = {} AND language = {} LIMIT 1")
+                query = sql.SQL('SELECT translation FROM system_translations WHERE source = %s AND language = %s LIMIT 1')
                 language = 'en'
                 from master import request
                 if request:
                     language = request.headers.get('language', 'en')
                 cursor.execute(query, (source, language))
                 translation = cursor.fetchone()
-                if translation is not None:
+                if translation:
                     return translation[0]
             except psycopg2.errors.UndefinedTable:
-                pass
+                postgres_admin_connection.rollback()
     return source
