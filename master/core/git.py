@@ -42,13 +42,12 @@ def _url(path: str, endpoint: str):
 
 # noinspection PyArgumentList
 class GitRepoManager:
-    __slots__ = ('repos', '_lock', '_repo_locks', '_last_commits')
+    __slots__ = ('repos', '_lock', '_repo_locks')
 
     def __init__(self):
         self.repos: Dict[str, Repo] = OrderedDict()
         self._repo_locks = {}  # Lock for each repo
         self._lock = threading.RLock()  # Global lock
-        self._last_commits: Dict[str, str] = {}
 
     @staticmethod
     def submit_commit(repo_path: str, body: dict) -> bool:
@@ -86,7 +85,6 @@ class GitRepoManager:
                 _logger.debug(f"Cloned repo from {url} to [{path}]")
             self.repos[path] = repo
             self._repo_locks[path] = threading.RLock()
-            self._last_commits[path] = repo.head.commit.hexsha
         except GitCommandError as e:
             _logger.error(f"Error cloning repo: {e}")
 
@@ -114,13 +112,14 @@ class GitRepoManager:
             if repo is None:
                 _logger.warning(f'Repository [{repo_path}] not found.')
                 return
-            last_commit = self._last_commits.get(repo_path)
-            is_valid, new_last_commit = False, None
+            last_commit = repo.head.commit.hexsha
+            is_valid = False
             try:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
             except GitCommandError as e:
                 _logger.error(f"Error pulling repo: {e}", exc_info=True)
+                new_last_commit = None
             if not new_last_commit:
                 return
             if last_commit != new_last_commit:
@@ -139,10 +138,8 @@ class GitRepoManager:
                         break
                     _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
                 is_valid = True
-            if is_valid:
-                self._last_commits[repo_path] = new_last_commit
-                if not self.trigger_build(repo_path):
-                    repo.git.reset('--hard', last_commit)
+            if is_valid and not self.trigger_build(repo_path):
+                repo.git.reset('--hard', last_commit)
 
     def commit_and_push(self, repo_path: str, message: str) -> None:
         """Stage all changes, commit, and push to the remote repository."""
@@ -170,7 +167,6 @@ class GitRepoManager:
                 return
             del self.repos[repo_path]
             del self._repo_locks[repo_path]
-            del self._last_commits[repo_path]
             rmtree(repo_path)
 
     @check_lock
