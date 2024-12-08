@@ -2,6 +2,7 @@ import logging
 import time
 from contextlib import contextmanager
 from typing import Optional, List
+from werkzeug.exceptions import NotFound
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
@@ -68,14 +69,13 @@ class Server:
         else:
             self.__class__.requests_count += 1
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
-            # noinspection PyBroadException
             try:
                 endpoint, values = adapter.match()
                 request.endpoint = endpoint
-            except Exception:
+            except NotFound:
                 values = {}
             if request.endpoint:
-                values.update(request.read_content())
+                values.update(request.read_parameters())
                 yield controller(values)
             else:
                 yield controller.raise_exception(404, ValueError('The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'))

@@ -1,7 +1,7 @@
-import json
 import logging
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
+from werkzeug.exceptions import UnsupportedMediaType
 from werkzeug.local import Local
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
@@ -22,7 +22,6 @@ local = Local()
 def generate_file_stream(file_path: str, chunk_size: int = 1024) -> Generator[bytes, None, None]:
     """
     Generate file content in chunks to stream it efficiently.
-
     :param file_path: Path to the file to be streamed.
     :param chunk_size: Size of each chunk in bytes.
     :yield: Chunk of file content.
@@ -61,15 +60,11 @@ class Request(BaseClass, _Request):
             localhost_ips.add(signature['public_ip'])
         return self.get_client_ip() in localhost_ips
 
-    def read_content(self) -> Dict[str, Any]:
-        if self.method == 'POST':
-            # noinspection PyBroadException
-            try:
-                return json.loads(self.data.decode('utf-8'))
-            except Exception as e:
-                _logger.info(f'Error found: {str(e)}', exc_info=True)
-                return {}
-        return {}
+    def read_parameters(self) -> Dict[str, Any]:
+        try:
+            return self.json
+        except UnsupportedMediaType:
+            return {}
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes
