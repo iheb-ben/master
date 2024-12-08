@@ -113,7 +113,6 @@ class GitRepoManager:
                 _logger.warning(f'Repository [{repo_path}] not found.')
                 return
             last_commit = repo.head.commit.hexsha
-            is_valid = False
             try:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
@@ -135,11 +134,10 @@ class GitRepoManager:
                     }
                     if not self.submit_commit(repo_path, body):
                         repo.git.reset('--hard', last_commit)
-                        break
+                        return
                     _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
-                is_valid = True
-            if is_valid and not self.trigger_build(repo_path):
-                repo.git.reset('--hard', last_commit)
+                if not self.trigger_build(repo_path):
+                    repo.git.reset('--hard', last_commit)
 
     def commit_and_push(self, repo_path: str, message: str) -> None:
         """Stage all changes, commit, and push to the remote repository."""
