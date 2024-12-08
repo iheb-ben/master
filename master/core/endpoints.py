@@ -69,15 +69,16 @@ class Request(BaseClass, _Request):
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes
-        if not mimetype:
+        headers = headers or {}
+        if isinstance(content, dict):
+            content = json.dumps(content)
+            if not mimetype and not headers.get('Content-Type') and self.accept_mimetypes.accept_json:
+                mimetype = 'application/json'
+        if not mimetype and not headers.get('Content-Type'):
             if self.accept_mimetypes.accept_html:
                 mimetype = 'text/html'
             elif self.accept_mimetypes.accept_json:
                 mimetype = 'application/json'
-            else:
-                mimetype = 'text/plain'
-        if isinstance(content, dict):
-            content = json.dumps(content)
         return classes.Response(status=status, response=content, headers=headers, mimetype=mimetype)
 
 
