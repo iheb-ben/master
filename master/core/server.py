@@ -68,18 +68,17 @@ class Server:
         else:
             self.__class__.requests_count += 1
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
+            # noinspection PyBroadException
             try:
                 endpoint, values = adapter.match()
                 request.endpoint = endpoint
-            except Exception as e:
-                yield controller.raise_exception(404, e)
+            except Exception:
                 values = {}
-            try:
-                if request.endpoint:
-                    values.update(request.read_content())
-                    yield controller(values)
-            except Exception as e:
-                yield controller.raise_exception(500, e)
+            if request.endpoint:
+                values.update(request.read_content())
+                yield controller(values)
+            else:
+                yield controller.raise_exception(404, ValueError('The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'))
             self.__class__.requests_count -= 1
 
     def __call__(self, *args, **kwargs):

@@ -140,7 +140,10 @@ class Controller(BaseClass):
     def __call__(self, values: Dict[str, Any]):
         if request.endpoint.name.startswith('_') and not request.is_localhost():
             return self.raise_exception(403, AccessDeniedError('Only requests from localhost are allowed to read call this endpoint'))
-        response = self.middleware(values)
+        try:
+            response = self.middleware(values)
+        except Exception as e:
+            return self.raise_exception(500, e)
         if response is None:
             response = request.send_response()
         elif not isinstance(response, _Response):
