@@ -6,7 +6,7 @@ import jwt
 from master.core import arguments
 
 
-def generate_jwt(payload: dict, expiration_minutes: int = 15, algorithm: Optional[str] = None) -> str:
+def generate_jwt(payload: Dict[str, Any], expiration_minutes: int = 15, algorithm: Optional[str] = None) -> str:
     """
     Generates a JWT with the given payload and expiration.
     :param payload: Data to include in the JWT.

@@ -3,7 +3,7 @@ from collections import OrderedDict
 from urllib.parse import quote, urlencode
 from pathlib import Path
 from shutil import rmtree
-from typing import Dict, Optional, Callable, List
+from typing import Dict, Optional, Callable, List, Any
 import time
 import json
 import logging
@@ -50,7 +50,7 @@ class GitRepoManager:
         self._lock = threading.RLock()  # Global lock
 
     @staticmethod
-    def submit_commit(repo_path: str, body: dict) -> bool:
+    def submit_commit(repo_path: str, body: Dict[str, Any]) -> bool:
         try:
             response = requests.post(url=_url(repo_path, 'commit/add'), json=body, headers={'Authorization': f'Bearer {token}'})
             response.raise_for_status()

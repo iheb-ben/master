@@ -61,7 +61,7 @@ class Request(BaseClass, _Request):
             localhost_ips.add(signature['public_ip'])
         return self.get_client_ip() in localhost_ips
 
-    def read_content(self) -> dict:
+    def read_content(self) -> Dict[str, Any]:
         if self.method == 'POST':
             # noinspection PyBroadException
             try:
@@ -144,9 +144,9 @@ class Controller(BaseClass):
             response = self.middleware(values)
         except Exception as e:
             return self.raise_exception(500, e)
-        if response is None:
+        if not response:
             response = request.send_response()
-        elif not isinstance(response, _Response):
+        elif not isinstance(response, _Response) or not isinstance(response, Response):
             response = request.send_response(content=response)
         return response
 
