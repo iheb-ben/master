@@ -6,7 +6,7 @@ from master.core.parser import PipelineMode
 class Main(Controller):
     @route('/pipeline/git/repository/<string:project>/<string:branch>/build', methods='GET', mode=PipelineMode.MANAGER.value)
     def _pipeline_build_project(self, project: str, branch: str):
-        pass
+        return {"test": "hello"}
 
     @route('/pipeline/git/repository/<string:project>/<string:branch>/commit/add', methods='POST', mode=PipelineMode.MANAGER.value)
     def _pipeline_add_commit(self, project: str, branch: str, hexsha: str, message: str, author: dict):

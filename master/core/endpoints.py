@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
@@ -68,13 +69,22 @@ class Request(BaseClass, _Request):
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes
+        if not mimetype:
+            if self.accept_mimetypes.accept_html:
+                mimetype = 'text/html'
+            elif self.accept_mimetypes.accept_json:
+                mimetype = 'application/json'
+            else:
+                mimetype = 'text/plain'
+        if mimetype == 'application/json' and not isinstance(content, str):
+            try:
+                content = json.dumps(content)
+            except json.JSONDecodeError:
+                content = {
+                    'status': status,
+                    'content': content,
+                }
         return classes.Response(status=status, response=content, headers=headers, mimetype=mimetype)
-
-    def render(self, template_xml_id: str, context: Optional[Dict[str, Any]] = None):
-        response = self.send_response(status=200, mimetype='text/html')
-        response.render_template = template_xml_id
-        response.template_context = context or {}
-        return response
 
 
 class Response(BaseClass, _Response):
@@ -126,7 +136,14 @@ class Endpoint:
 
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
+    def _page_not_found(self, error: Exception):
+        return request.send_response(status=404,
+                                     content=translate(str(error)),
+                                     mimetype='text/html')
+
     def raise_exception(self, status: int, error: Exception):
+        if status == 404 and request.accept_mimetypes.accept_html:
+            return self._page_not_found(error)
         return request.send_response(status, translate(str(error)))
 
     def middleware(self, values: Dict[str, Any]):
