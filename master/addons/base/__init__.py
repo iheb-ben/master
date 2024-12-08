@@ -1,7 +1,4 @@
-from typing import Dict, Any
-
-from typing_extensions import Optional
-
+from typing import Dict, Any, Optional
 from master.core.endpoints import Request as _Request
 
 

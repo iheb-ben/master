@@ -76,14 +76,8 @@ class Request(BaseClass, _Request):
                 mimetype = 'application/json'
             else:
                 mimetype = 'text/plain'
-        if mimetype == 'application/json' and not isinstance(content, str):
-            try:
-                content = json.dumps(content)
-            except json.JSONDecodeError:
-                content = {
-                    'status': status,
-                    'content': content,
-                }
+        if isinstance(content, dict):
+            content = json.dumps(content)
         return classes.Response(status=status, response=content, headers=headers, mimetype=mimetype)
 
 
@@ -136,14 +130,15 @@ class Endpoint:
 
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
-    def _page_not_found(self, error: Exception):
+    def _page_404(self, error: Exception):
         return request.send_response(status=404,
                                      content=translate(str(error)),
                                      mimetype='text/html')
 
     def raise_exception(self, status: int, error: Exception):
-        if status == 404 and request.accept_mimetypes.accept_html:
-            return self._page_not_found(error)
+        method_name = f'_page_{status}'
+        if request.accept_mimetypes.accept_html and hasattr(self, method_name):
+            return getattr(self, method_name)(error)
         return request.send_response(status, translate(str(error)))
 
     def middleware(self, values: Dict[str, Any]):
