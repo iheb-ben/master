@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Union, List, Dict, Any, Callable, Optional, Generator
+from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
 from werkzeug.local import Local
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
@@ -92,16 +92,23 @@ class Response(BaseClass, _Response):
 
 
 class Endpoint:
-    __slots__ = ('name', 'module', 'parameters')
+    __slots__ = ('name', 'modules', 'parameters')
 
     def __init__(self, func: Callable, parameters: Dict[str, Any]):
         self.parameters = parameters
         self.name: str = func.__name__
+        self.modules = set()
+        module = self.module_name(func)
+        if module:
+            self.modules.add(module)
+
+    @staticmethod
+    def module_name(func: Callable) -> Optional[str]:
         module: str = func.__module__
         if module.startswith('master.addons.'):
-            self.module = module.split('.')[2]
+            return module.split('.')[2]
         else:
-            self.module = None
+            return None
 
     @classmethod
     def register(cls, urls: Union[str, List[str]], func: Callable, parameters: Dict[str, Any]):
@@ -112,7 +119,10 @@ class Endpoint:
                 url = '/' + url
             if url.endswith('/'):
                 url = url[:-1]
-            methods[url] = cls(func, parameters)
+            if url not in methods or methods[url].name != func.__name__:
+                methods[url] = cls(func, parameters)
+            else:
+                methods[url].modules.add(cls.module_name(func))
 
 
 # noinspection PyMethodMayBeStatic
@@ -121,9 +131,12 @@ class Controller(BaseClass):
         return request.send_response(status, translate(str(error)))
 
     def middleware(self, values: Dict[str, Any]):
+        return getattr(self, request.endpoint.name)(**values)
+
+    def __call__(self, values: Dict[str, Any]):
         if request.endpoint.name.startswith('_') and not request.is_localhost():
             return self.raise_exception(403, AccessDeniedError('Only requests from localhost are allowed to read call this endpoint'))
-        response = getattr(self, request.endpoint.name)(**values)
+        response = self.middleware(values)
         if response is None:
             response = request.send_response()
         elif not isinstance(response, _Response):
@@ -135,9 +148,10 @@ class Controller(BaseClass):
             endpoint_type = arguments['pipeline_mode']
         else:
             endpoint_type = PipelineMode.INSTANCE.value
-        urls = []
+        modules, urls = set(modules), []
         for url, endpoint in methods.items():
+            endpoint_modules: Set[str] = endpoint.modules
             endpoint_types: List[str] = endpoint.parameters['mode']
-            if endpoint.module in modules and endpoint_type in endpoint_types:
+            if endpoint_modules.issubset(modules) and endpoint_type in endpoint_types:
                 urls.append(Rule(url, endpoint=endpoint, methods=endpoint.parameters['methods']))
         return urls

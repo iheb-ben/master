@@ -77,7 +77,7 @@ class Server:
             try:
                 if request.endpoint:
                     values.update(request.read_content())
-                    yield controller.middleware(values)
+                    yield controller(values)
             except Exception as e:
                 yield controller.raise_exception(500, e)
             self.__class__.requests_count -= 1
