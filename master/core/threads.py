@@ -9,6 +9,7 @@ from master.tools.methods import call_method
 
 _logger = logging.getLogger(__name__)
 stop_event = threading.Event()
+run_event = threading.Event()
 started_threads: Dict[threading.Thread, bool] = {}
 
 
@@ -18,7 +19,6 @@ class ThreadManager:
     when the main program receives a termination signal.
     """
     __slots__ = '_threads'
-    allow = threading.Event()
 
     def __init__(self):
         self._threads: List[threading.Thread] = []
@@ -74,7 +74,7 @@ def worker(func: Callable):
             if not started_threads[current]:
                 call_method(self, '_start')
                 started_threads[current] = True
-            if ThreadManager.allow.is_set():
+            if run_event.is_set():
                 func(self, *args, **kwargs)
             else:
                 time.sleep(1)

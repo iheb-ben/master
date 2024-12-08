@@ -10,7 +10,7 @@ from master.core.db import postgres_admin_connection, mongo_admin_connection
 from master.core.endpoints import Controller
 from master.core.modules import default_installed_modules
 from master.core.registry import ClassManager
-from master.core.threads import worker, ThreadManager
+from master.core.threads import worker, run_event
 
 _logger = logging.getLogger(__name__)
 modules: List[str] = []
@@ -55,7 +55,7 @@ class Server:
                                    threaded=True)
         # Set a timeout (2 seconds) to check for the stop event periodically
         self._server.timeout = 2
-        ThreadManager.allow.set()
+        run_event.set()
 
     @contextmanager
     def dispatch_request(self, request):
