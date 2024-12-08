@@ -13,6 +13,26 @@ Global Variables:
 """
 
 import socket
+import subprocess
+import psutil
+
+
+def get_max_threads_windows():
+    virtual_memory = psutil.virtual_memory()
+    total_memory = virtual_memory.total
+    thread_stack_size = 2 * 1024 * 1024
+    max_threads = total_memory // thread_stack_size
+    return max_threads
+
+
+# noinspection PyBroadException
+def get_max_threads():
+    try:
+        result = subprocess.run(['ulimit', '-u'], capture_output=True, text=True, shell=True)
+        return int(result.stdout.strip())
+    except Exception:
+        return get_max_threads_windows()
+
 
 # A global set to store already checked ports to avoid redundant checks
 _already_checked_ports = set()

@@ -5,6 +5,20 @@ import threading
 from master.tools.collection import is_complex_iterable
 
 
+class ThreadSafeVariable:
+    def __init__(self, initial_value=None):
+        self._value = initial_value
+        self._lock = threading.RLock()
+
+    def set_value(self, value):
+        with self._lock:
+            self._value = value
+
+    def get_value(self):
+        with self._lock:
+            return self._value
+
+
 def check_lock(func: Callable):
     @wraps(func)
     def _wrapper(self, *args, **kwargs):

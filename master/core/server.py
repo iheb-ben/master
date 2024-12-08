@@ -6,17 +6,20 @@ from werkzeug.exceptions import NotFound
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
+from master.api import ThreadSafeVariable
 from master.core import arguments
 from master.core.db import postgres_admin_connection, mongo_admin_connection
 from master.core.endpoints import Controller
 from master.core.modules import default_installed_modules
 from master.core.registry import ClassManager
 from master.core.threads import worker, run_event
+from master.tools.system import get_max_threads
 
 _logger = logging.getLogger(__name__)
 modules: List[str] = []
 classes: Optional[ClassManager] = None
 controller: Optional[Controller] = None
+max_threads = max(abs(get_max_threads() - 1), 1)
 
 
 class RequestHandler(WSGIRequestHandler):
@@ -30,8 +33,8 @@ class RequestHandler(WSGIRequestHandler):
 
 class Server:
     __slots__ = '_server'
-    loading = False
-    requests_count = 0
+    loading = ThreadSafeVariable(False)
+    requests_count = ThreadSafeVariable(0)
 
     def __init__(self):
         self._server = None
@@ -61,13 +64,13 @@ class Server:
     @contextmanager
     def dispatch_request(self, request):
         attempt = 60
-        while self.loading and attempt >= 0:
+        while self.loading.get_value() and attempt >= 0:
             time.sleep(1)
             attempt -= 1
-        if self.loading:
+        if self.loading.get_value() or self.requests_count.get_value() >= max_threads:
             yield controller.raise_exception(503, ConnectionAbortedError('Server is busy'))
         else:
-            self.__class__.requests_count += 1
+            self.requests_count.set_value(self.requests_count.get_value() + 1)
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
             try:
                 endpoint, values = adapter.match()
@@ -79,7 +82,7 @@ class Server:
                 yield controller(values)
             else:
                 yield controller.raise_exception(404, ValueError('The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'))
-            self.__class__.requests_count -= 1
+            self.requests_count.set_value(self.requests_count.get_value() - 1)
 
     def __call__(self, *args, **kwargs):
         request = classes.Request(*args, **kwargs)
