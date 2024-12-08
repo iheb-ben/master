@@ -40,26 +40,6 @@ def _url(path: str, endpoint: str):
     return f'http://localhost:{arguments["port"]}/pipeline/git/repository/{project}/{branch}/{endpoint}'
 
 
-def _post_url(url, body) -> bool:
-    try:
-        response = requests.post(url=url, json=body, headers={'Authorization': f'Bearer {token}'})
-        response.raise_for_status()
-        return True
-    except requests.RequestException as e:
-        _logger.error(f'Server error: {str(e)}')
-        return False
-
-
-def _get_url(url) -> bool:
-    try:
-        response = requests.get(url=url, headers={'Authorization': f'Bearer {token}'})
-        response.raise_for_status()
-        return True
-    except requests.RequestException as e:
-        _logger.error(f'Server error: {str(e)}')
-        return False
-
-
 # noinspection PyArgumentList
 class GitRepoManager:
     __slots__ = ('repos', '_lock', '_repo_locks', '_last_commits')
@@ -69,6 +49,26 @@ class GitRepoManager:
         self._repo_locks = {}  # Lock for each repo
         self._lock = threading.RLock()  # Global lock
         self._last_commits: Dict[str, str] = {}
+
+    @staticmethod
+    def submit_commit(repo_path: str, body: dict) -> bool:
+        try:
+            response = requests.post(url=_url(repo_path, 'commit/add'), json=body, headers={'Authorization': f'Bearer {token}'})
+            response.raise_for_status()
+            return True
+        except requests.RequestException as e:
+            _logger.error(f'Server error: {str(e)}')
+            return False
+
+    @staticmethod
+    def trigger_build(repo_path: str) -> bool:
+        try:
+            response = requests.get(url=_url(repo_path, 'build'), headers={'Authorization': f'Bearer {token}'})
+            response.raise_for_status()
+            return True
+        except requests.RequestException as e:
+            _logger.error(f'Server error: {str(e)}')
+            return False
 
     @check_lock
     def clone(self, url: str, path: str) -> None:
@@ -115,31 +115,34 @@ class GitRepoManager:
                 _logger.warning(f'Repository [{repo_path}] not found.')
                 return
             last_commit = self._last_commits.get(repo_path)
+            is_valid, new_last_commit = False, None
             try:
                 repo.remotes.origin.pull()
                 new_last_commit = repo.head.commit.hexsha
-                if last_commit != new_last_commit:
-                    is_valid = True
-                    _logger.debug(f'Changes in [{repo_path}] since last commit {last_commit}:')
-                    for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
-                        if not _post_url(url=_url(repo_path, 'commit/add'), body={
-                            'hexsha': commit.hexsha,
-                            'message': commit.message,
-                            'author': {
-                                'name': commit.author.name,
-                                'email': commit.author.email,
-                            },
-                        }):
-                            repo.git.reset('--hard', last_commit)
-                            is_valid = False
-                            break
-                        _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
-                    if is_valid:
-                        self._last_commits[repo_path] = new_last_commit
-                        if not _get_url(url=_url(repo_path, 'build')):
-                            repo.git.reset('--hard', last_commit)
             except GitCommandError as e:
                 _logger.error(f"Error pulling repo: {e}", exc_info=True)
+            if not new_last_commit:
+                return
+            if last_commit != new_last_commit:
+                _logger.debug(f'Changes in [{repo_path}] since last commit {last_commit}:')
+                for commit in repo.iter_commits(f'{last_commit}..{new_last_commit}'):
+                    body = {
+                        'hexsha': commit.hexsha,
+                        'message': commit.message,
+                        'author': {
+                            'name': commit.author.name,
+                            'email': commit.author.email,
+                        },
+                    }
+                    if not self.submit_commit(repo_path, body):
+                        repo.git.reset('--hard', last_commit)
+                        break
+                    _logger.info(f'repo:[{repo_path}] - {commit.hexsha[:7]}:"{clean_string_advanced(commit.message)}" by "{commit.author.name}".')
+                is_valid = True
+            if is_valid:
+                self._last_commits[repo_path] = new_last_commit
+                if not self.trigger_build(repo_path):
+                    repo.git.reset('--hard', last_commit)
 
     def commit_and_push(self, repo_path: str, message: str) -> None:
         """Stage all changes, commit, and push to the remote repository."""

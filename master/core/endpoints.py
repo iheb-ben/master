@@ -1,4 +1,5 @@
 import json
+import logging
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
 from werkzeug.local import Local
@@ -13,7 +14,7 @@ from master.core.registry import BaseClass
 from master.exceptions import AccessDeniedError
 from master.tools.collection import is_complex_iterable
 
-# Store methods names with annotation api.route
+_logger = logging.getLogger(__name__)
 methods = {}
 local = Local()
 
@@ -65,7 +66,8 @@ class Request(BaseClass, _Request):
             # noinspection PyBroadException
             try:
                 return json.loads(self.data.decode('utf-8'))
-            except Exception:
+            except Exception as e:
+                _logger.info(f'Error found: {str(e)}', exc_info=True)
                 return {}
         return {}
 
@@ -122,7 +124,9 @@ class Endpoint:
             if url not in methods or methods[url].name != func.__name__:
                 methods[url] = cls(func, parameters)
             else:
-                methods[url].modules.add(cls.module_name(func))
+                module = cls.module_name(func)
+                if module:
+                    methods[url].modules.add(module)
 
 
 # noinspection PyMethodMayBeStatic
