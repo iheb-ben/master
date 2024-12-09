@@ -2,7 +2,7 @@ import logging
 import time
 from contextlib import contextmanager
 from typing import Optional, List
-from werkzeug.exceptions import NotFound, TooManyRequests, Locked
+from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
@@ -68,7 +68,7 @@ class Server:
             time.sleep(1)
             attempt -= 1
         if self.loading.get_value():
-            yield controller.with_exception(Locked())
+            yield controller.with_exception(ServiceUnavailable())
         elif self.requests_count.get_value() >= max_threads:
             yield controller.with_exception(TooManyRequests())
         else:

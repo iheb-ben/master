@@ -144,7 +144,6 @@ class Controller(BaseClass):
     def with_exception(self, error: Exception):
         if isinstance(error, HTTPException) and hasattr(error, 'code'):
             return self.raise_exception(error.code, error)
-        _logger.error(f'Error found: {str(error)}', exc_info=True)
         raise error
 
     def middleware(self, values: Dict[str, Any]):
