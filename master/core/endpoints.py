@@ -2,7 +2,7 @@ import json
 import logging
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
-from werkzeug.exceptions import UnsupportedMediaType
+from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, InternalServerError
 from werkzeug.local import Local
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
@@ -12,7 +12,6 @@ from master.core import arguments, signature
 from master.core.db import translate
 from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
-from master.exceptions import AccessDeniedError
 from master.tools.collection import is_complex_iterable
 
 _logger = logging.getLogger(__name__)
@@ -142,19 +141,25 @@ class Controller(BaseClass):
             return getattr(self, method_name)(error)
         return request.send_response(status, translate(str(error)))
 
+    def with_exception(self, error: Exception):
+        if isinstance(error, HTTPException) and hasattr(error, 'code'):
+            return self.raise_exception(error.code, error)
+        _logger.error(f'Error found: {str(error)}', exc_info=True)
+        raise error
+
     def middleware(self, values: Dict[str, Any]):
         return getattr(self, request.endpoint.name)(**values)
 
     def __call__(self, values: Dict[str, Any]):
-        if request.endpoint.name.startswith('_') and not request.is_localhost():
-            return self.raise_exception(403, AccessDeniedError('Only requests from localhost are allowed to read call this endpoint'))
         try:
+            if request.endpoint.name.startswith('_') and not request.is_localhost():
+                raise Unauthorized()
             response = self.middleware(values)
-        except Exception as e:
-            return self.raise_exception(500, e)
+        except Exception as error:
+            return self.with_exception(error)
         if not response:
             response = request.send_response()
-        elif not isinstance(response, _Response) or not isinstance(response, Response):
+        elif not isinstance(response, _Response):
             response = request.send_response(content=response)
         return response
 

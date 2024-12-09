@@ -2,7 +2,7 @@ import logging
 import time
 from contextlib import contextmanager
 from typing import Optional, List
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import NotFound, TooManyRequests, Locked
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
@@ -67,8 +67,10 @@ class Server:
         while self.loading.get_value() and attempt >= 0:
             time.sleep(1)
             attempt -= 1
-        if self.loading.get_value() or self.requests_count.get_value() >= max_threads:
-            yield controller.raise_exception(503, ConnectionAbortedError('Server is busy'))
+        if self.loading.get_value():
+            yield controller.with_exception(Locked())
+        elif self.requests_count.get_value() >= max_threads:
+            yield controller.with_exception(TooManyRequests())
         else:
             self.requests_count.set_value(self.requests_count.get_value() + 1)
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
@@ -81,7 +83,7 @@ class Server:
                 values.update(request.read_parameters())
                 yield controller(values)
             else:
-                yield controller.raise_exception(404, ValueError('The requested URL was not found on the server. If you entered the URL manually please check your spelling and try again.'))
+                yield controller.with_exception(NotFound())
             self.requests_count.set_value(self.requests_count.get_value() - 1)
 
     def __call__(self, *args, **kwargs):
