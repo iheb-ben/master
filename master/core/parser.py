@@ -49,6 +49,7 @@ class ArgumentsDict(TypedDict, total=False):
     log_level: str
     master_password: str
     jwt_secret: str
+    origins: Optional[str]
     port: int
     addons_paths: Union[List[str], str, None]
     directory: str
@@ -57,7 +58,6 @@ class ArgumentsDict(TypedDict, total=False):
     pipeline_port: int
     pipeline_interval: int
     pipeline_webhook: bool
-    pipeline_origin: Optional[str]
     db_name: str
     db_host: str
     db_port: int
@@ -203,12 +203,12 @@ class ArgumentParser:
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
+        self._parser.add_argument('--origins', type=str, help='Allow origins (default localhost)')
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')
         pipeline_group.add_argument('--pipeline-mode', choices=[e.value for e in PipelineMode if e != PipelineMode.INSTANCE], default=PipelineMode.MANAGER.value, help='Pipeline mode')
         pipeline_group.add_argument('--pipeline-port', type=int, default=find_available_port(9001), help='Pipeline node port')
-        pipeline_group.add_argument('--pipeline-origin', type=str, help='Allow origins (default localhost)')
         pipeline_group.add_argument('--pipeline-interval', type=int, default=10, help='Periode (Seconds) of checking the git repositories')
         pipeline_group.add_argument('--pipeline-webhook', action='store_true', default=False, help='Use webhooks instead of custom watcher for any repo changes')
         # Database settings
@@ -245,8 +245,8 @@ class ArgumentParser:
             parsed.arguments['jwt_secret'] = parsed.jwt_secret
         if not parsed.arguments['pipeline_interval'] or parsed.arguments['pipeline_interval'] <= 0:
             parsed.arguments['pipeline_interval'] = 1
-        if not parsed.arguments['pipeline_origin']:
-            parsed.arguments['pipeline_origin'] = 'localhost'
+        if not parsed.arguments['origins']:
+            parsed.arguments['origins'] = '127.0.0.1'
         if parsed.arguments['log_file']:
             _create_file(Path(parsed.arguments['log_file']))
         if parsed.arguments['directory']:

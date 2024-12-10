@@ -12,6 +12,7 @@ from werkzeug.wrappers import Request as _Request, Response as _Response
 from master import request
 from master.core import arguments, signature
 from master.core.db import translate
+from master.core.git import token
 from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
 from master.tools.collection import is_complex_iterable
@@ -173,10 +174,18 @@ class Controller(BaseClass):
     def middleware(self, values: Dict[str, Any]):
         return getattr(self, request.endpoint.name)(**values)
 
+    # noinspection PyUnusedLocal
+    def authorize(self, *args, **kwargs):
+        if request.endpoint.name.startswith('_') and not request.is_localhost():
+            authorization = request.headers.get('Authorization')
+            if not authorization or authorization != token:
+                raise Unauthorized()
+            elif request.get_client_ip() not in arguments['origins']:
+                raise Unauthorized()
+
     def __call__(self, values: Dict[str, Any]):
         try:
-            if request.endpoint.name.startswith('_') and not request.is_localhost():
-                raise Unauthorized()
+            self.authorize(values)
             response = self.middleware(values)
         except Exception as error:
             return self.with_exception(error)
