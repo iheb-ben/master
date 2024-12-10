@@ -1,7 +1,10 @@
 import json
+from io import BytesIO
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
+from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, InternalServerError
+from werkzeug.formparser import parse_form_data
 from werkzeug.local import Local
 from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
@@ -59,12 +62,27 @@ class Request(BaseClass, _Request):
         return self.get_client_ip() in localhost_ips
 
     def read_parameters(self) -> Dict[str, Any]:
+        """
+        Reads and parses request parameters based on the Content-Type.
+        Supports JSON, form-encoded, and multipart data.
+        """
         if self.method in ('GET', 'HEAD'):
             return {}
+        content_type = self.headers.get('Content-Type', '')
         try:
-            return self.json
+            if not content_type or content_type.startswith('application/json'):
+                return self.json
+            elif content_type.startswith('application/x-www-form-urlencoded'):
+                return MultiDict(self.form).to_dict()
+            elif content_type.startswith('multipart/form-data') and self.method in ('PUT', 'POST', 'PATCH'):
+                def stream_factory():
+                    return BytesIO(self.data)
+
+                _, form_data, _ = parse_form_data(environ=self.environ, stream_factory=stream_factory)
+                return MultiDict(form_data).to_dict()
         except UnsupportedMediaType:
             return {}
+        return {}
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes

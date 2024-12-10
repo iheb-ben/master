@@ -2,8 +2,8 @@ import datetime
 import logging
 import threading
 import uuid
-from abc import ABC, abstractmethod
-from typing import Optional, Dict, Generator, List, Any
+from abc import abstractmethod
+from typing import Optional, Dict, Generator, List, Any, Generic, AnyStr
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
 import psycopg2
@@ -21,7 +21,7 @@ ROLE_TABLE_NAME = "user_roles"  # Table for storing user roles in PostgreSQL
 _logger = logging.getLogger(__name__)
 
 
-class Manager(ABC):
+class Manager(Generic[AnyStr]):
     @abstractmethod
     def admin_connection(self, *args, **kwargs) -> Any:
         """Returns a connection with administrative privileges."""
