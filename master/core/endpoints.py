@@ -101,14 +101,7 @@ class Request(BaseClass, _Request):
 
 
 class Response(BaseClass, _Response):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.render_template: Optional[str] = None
-        self.template_context: Optional[Dict[str, Any]] = None
-
-    def __call__(self, *args, **kwargs):
-        # TODO: build the template
-        return super().__call__(*args, **kwargs)
+    pass
 
 
 class Endpoint:
