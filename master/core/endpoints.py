@@ -199,8 +199,9 @@ class Controller(BaseClass):
 
     def __call__(self, values: Dict[str, Any]):
         try:
-            self.authorize(**values)
-            response = self.middleware(**values)
+            response = self.authorize(**values)
+            if not response:
+                response = self.middleware(**values)
         except Exception as error:
             return self.with_exception(error)
         if not response:
