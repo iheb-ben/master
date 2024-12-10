@@ -1,5 +1,4 @@
 import json
-import logging
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
 from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, InternalServerError
@@ -14,7 +13,6 @@ from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
 from master.tools.collection import is_complex_iterable
 
-_logger = logging.getLogger(__name__)
 methods = {}
 local = Local()
 
