@@ -59,6 +59,8 @@ class Request(BaseClass, _Request):
         return self.get_client_ip() in localhost_ips
 
     def read_parameters(self) -> Dict[str, Any]:
+        if self.method in ('GET', 'HEAD'):
+            return {}
         try:
             return self.json
         except UnsupportedMediaType:
@@ -108,6 +110,12 @@ class Endpoint:
             return module.split('.')[2]
         else:
             return None
+
+    @classmethod
+    def clear(cls, func: Callable):
+        for url in list(methods.keys()):
+            if url in methods and methods[url].name == func.__name__:
+                del methods[url]
 
     @classmethod
     def register(cls, urls: Union[str, List[str]], func: Callable, parameters: Dict[str, Any]):

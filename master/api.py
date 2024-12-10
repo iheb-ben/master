@@ -98,7 +98,7 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
     if not auth:
         auth = 'public'
     if not methods:
-        methods = ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE']
+        methods = ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'TRACE']
     elif not is_complex_iterable(methods):
         methods = [methods.strip().upper()]
     else:
@@ -119,3 +119,9 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
         })
         return func
     return _
+
+
+def clear_route(func: Callable):
+    from master.core.endpoints import Endpoint
+    Endpoint.clear(func)
+    return func
