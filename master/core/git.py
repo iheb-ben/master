@@ -204,6 +204,4 @@ class GitRepoManager:
             token_prefix = repo_token and f'{repo_token}@' or ''
             url = f'https://{token_prefix}github.com/{owner}/{repo}.git'
             repo_path = str(directory / repo / branch)
-            # Clone the repository and/or add it to manager if already exists
-            arguments['addons_paths'].append(repo_path)
             self.clone(url=url, path=repo_path)

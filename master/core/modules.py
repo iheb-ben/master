@@ -4,7 +4,7 @@ import sys
 from collections import OrderedDict
 from importlib.util import spec_from_file_location, module_from_spec
 from pathlib import Path
-from typing import Optional, Union, List, Iterable, Dict, Generator, Any, Tuple
+from typing import Optional, Union, List, Iterable, Dict, Generator, Any, Tuple, Callable
 
 from master import pip, addons
 from master.core import arguments, db
@@ -198,10 +198,11 @@ class Graph:
 
     def __init__(self):
         self._configurations: Dict[str, Configuration] = {}
+        check_module_name_prefix: Callable = lambda name: any(name.startswith(c) for c in ('.', '_'))
         for addons_path in iterate_addons_paths():
             is_empty = True
             for module_path in addons_path.iterdir():
-                if module_path.is_file() or module_path.name.startswith('_'):
+                if module_path.is_file() or check_module_name_prefix(module_path.name):
                     continue
                 if arguments['pipeline'] and arguments['pipeline_mode'] == PipelineMode.NODE.value and module_path.name != base_addon:
                     continue
