@@ -171,8 +171,8 @@ class Controller(BaseClass):
             return self.raise_exception(error.code, error)
         raise error
 
-    def middleware(self, values: Dict[str, Any]):
-        return getattr(self, request.endpoint.name)(**values)
+    def middleware(self, *args, **kwargs):
+        return getattr(self, request.endpoint.name)(*args, **kwargs)
 
     # noinspection PyUnusedLocal
     def authorize(self, *args, **kwargs):
@@ -185,8 +185,8 @@ class Controller(BaseClass):
 
     def __call__(self, values: Dict[str, Any]):
         try:
-            self.authorize(values)
-            response = self.middleware(values)
+            self.authorize(**values)
+            response = self.middleware(**values)
         except Exception as error:
             return self.with_exception(error)
         if not response:
