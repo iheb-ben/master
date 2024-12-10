@@ -174,14 +174,28 @@ class Controller(BaseClass):
     def middleware(self, *args, **kwargs):
         return getattr(self, request.endpoint.name)(*args, **kwargs)
 
+    @property
+    def origins(self):
+        origin_set = set()
+        for element in (request.endpoint.parameters['origins'] or '').strip().split(','):
+            element = element.strip()
+            if element:
+                origin_set.add(element)
+        if origin_set:
+            return origin_set
+        for element in (arguments['origins'] or '').strip().split(','):
+            element = element.strip()
+            if element:
+                origin_set.add(element)
+        return origin_set
+
     # noinspection PyUnusedLocal
     def authorize(self, *args, **kwargs):
-        if request.endpoint.name.startswith('_') and not request.is_localhost():
-            authorization = request.headers.get('Authorization')
-            if not authorization or authorization != token:
-                raise Unauthorized()
-            elif request.get_client_ip() not in arguments['origins']:
-                raise Unauthorized()
+        if request.endpoint.name.startswith('_') and not request.is_localhost() and (not request.authorization or request.authorization != token):
+            raise Unauthorized()
+        origins = self.origins
+        if origins and request.get_client_ip() not in origins and '*' not in origins:
+            raise Unauthorized()
 
     def __call__(self, values: Dict[str, Any]):
         try:

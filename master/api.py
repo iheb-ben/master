@@ -94,7 +94,7 @@ class lazy_classproperty(classproperty):
             self._register[func_name] = value
 
 
-def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None):
+def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None):
     if not auth:
         auth = 'public'
     if not methods:
@@ -116,6 +116,7 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
             'auth': auth,
             'methods': methods,
             'mode': mode,
+            'origins': origins,
         })
         return func
     return _
