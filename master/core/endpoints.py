@@ -203,7 +203,7 @@ class Controller(BaseClass):
             response = request.send_response(content=response)
         return response
 
-    def map_urls(self, modules):
+    def map_urls(self, modules) -> List[Rule]:
         if arguments['pipeline']:
             endpoint_type = arguments['pipeline_mode']
         else:
