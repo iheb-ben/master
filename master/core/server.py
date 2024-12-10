@@ -77,7 +77,7 @@ class Server:
             attempt -= 1
         if self.loading.get_value():
             yield controller.with_exception(ServiceUnavailable())
-        elif self.requests_count.get_value() > self.max_threads_number:
+        elif self.requests_count.get_value() >= self.max_threads_number:
             yield controller.with_exception(TooManyRequests())
         else:
             self.requests_count.set_value(self.requests_count.get_value() + 1)
