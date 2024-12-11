@@ -107,7 +107,7 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
         methods = [value.strip().upper() for value in methods]
     assert isinstance(methods, Iterable) and all(value in default_methods for value in methods)
     if not mode:
-        mode = ['instance']
+        mode = [PipelineMode.INSTANCE.value]
     elif not is_complex_iterable(mode):
         mode = [mode.strip().lower()]
     else:
