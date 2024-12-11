@@ -95,8 +95,10 @@ class Server:
         if self.loading.get_value():
             yield controller.with_exception(ServiceUnavailable())
         elif self.requests_count.increase() > self.max_threads_number:
-            yield controller.with_exception(TooManyRequests())
-            self.requests_count.decrease()
+            try:
+                yield controller.with_exception(TooManyRequests())
+            finally:
+                self.requests_count.decrease()
         else:
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
             try:
@@ -109,8 +111,6 @@ class Server:
                     yield controller(values)
                 else:
                     yield controller.with_exception(NotFound())
-            except Exception:
-                raise
             finally:
                 self.requests_count.decrease()
 
@@ -119,7 +119,5 @@ class Server:
         try:
             with self.dispatch_request(request) as response:
                 return response(*args, **kwargs)
-        except Exception:
-            raise
         finally:
             del request
