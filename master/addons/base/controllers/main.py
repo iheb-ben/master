@@ -16,15 +16,14 @@ class Main(Controller):
         if path.is_file():
             return request.send_response(
                 content=generate_file_stream(file_path),
-                mimetype='application/octet-stream',
                 headers={'Content-Disposition': f'attachment;filename={secure_filename(path.name)}'})
         raise NotFound()
 
-    @route('/favicon.ico', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value])
-    def favicon_icon(self):
+    @route('/favicon.ico', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value], content='application/octet-stream')
+    def favicon(self):
         return self._return_resource(str(configurations[base_addon].path / 'static/src/description/favicon.ico'))
 
-    @route('/static/<path:file_path>', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value])
+    @route('/static/<path:file_path>', methods='GET', mode=[PipelineMode.INSTANCE.value, PipelineMode.MANAGER.value], content='application/octet-stream')
     def static_files(self, file_path: str):
         file_path_elements = file_path and file_path.split('/') or []
         if len(file_path_elements) < 2:

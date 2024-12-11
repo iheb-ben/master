@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable, Any, Type, Dict, Optional, Union, List
+from typing import Callable, Any, Type, Dict, Optional, Union, List, Iterable
 import threading
 
 from master.tools.collection import is_complex_iterable
@@ -92,29 +92,37 @@ class lazy_classproperty(classproperty):
         self._register[self.__read_name(instance.__class__)] = value
 
 
-def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None):
+def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None, content: Optional[str] = None):
+    from master.core.parser import PipelineMode
+    from master.core.endpoints import Endpoint
     if not auth:
         auth = 'public'
+    assert auth in ('public', 'user')
+    default_methods = ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'TRACE']
     if not methods:
-        methods = ['GET', 'OPTIONS', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE', 'TRACE']
+        methods = default_methods
     elif not is_complex_iterable(methods):
         methods = [methods.strip().upper()]
     else:
         methods = [value.strip().upper() for value in methods]
+    assert isinstance(methods, Iterable) and all(value in default_methods for value in methods)
     if not mode:
         mode = ['instance']
     elif not is_complex_iterable(mode):
         mode = [mode.strip().lower()]
     else:
         mode = [value.strip().lower() for value in mode]
+    assert isinstance(mode, Iterable) and all(PipelineMode.from_value(value) for value in mode)
+    assert not origins or isinstance(origins, str)
+    assert not content or isinstance(content, str)
 
     def _(func: Callable):
-        from master.core.endpoints import Endpoint
         Endpoint.register(urls, func, {
             'auth': auth,
             'methods': methods,
             'mode': mode,
             'origins': origins,
+            'content': content,
         })
         return func
     return _

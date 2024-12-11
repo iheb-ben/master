@@ -1,4 +1,5 @@
 import json
+from inspect import Parameter, signature as inspect_signature
 from io import BytesIO
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
@@ -73,9 +74,10 @@ class Request(BaseClass, _Request):
         try:
             if not content_type or content_type.startswith('application/json'):
                 return self.json
-            elif content_type.startswith('application/x-www-form-urlencoded') and self.method in ('PUT', 'POST', 'PATCH'):
+            is_form_method = self.method in ('PUT', 'POST', 'PATCH')
+            if content_type.startswith('application/x-www-form-urlencoded') and is_form_method:
                 return MultiDict(self.form).to_dict()
-            elif content_type.startswith('multipart/form-data') and self.method in ('PUT', 'POST', 'PATCH'):
+            elif content_type.startswith('multipart/form-data') and is_form_method:
                 def stream_factory():
                     return BytesIO(self.data)
 
@@ -88,6 +90,8 @@ class Request(BaseClass, _Request):
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
         from master.core.server import classes
         headers = headers or {}
+        if self.endpoint and self.endpoint.parameters['content']:
+            mimetype = self.endpoint.parameters['content']
         if isinstance(content, dict):
             content = json.dumps(content)
             if not mimetype and not headers.get('Content-Type') and self.accept_mimetypes.accept_json:
@@ -108,9 +112,9 @@ class Endpoint:
     __slots__ = ('name', 'modules', 'parameters')
 
     def __init__(self, func: Callable, parameters: Dict[str, Any]):
-        self.parameters = parameters
+        self.parameters: Dict[str, Any] = parameters
         self.name: str = func.__name__
-        self.modules = set()
+        self.modules: Set[str] = set()
         module = self.module_name(func)
         if module:
             self.modules.add(module)
@@ -165,7 +169,17 @@ class Controller(BaseClass):
         raise error
 
     def middleware(self, *args, **kwargs):
-        return getattr(self, request.endpoint.name)(*args, **kwargs)
+        method = getattr(self, request.endpoint.name, None)
+        if not method:
+            raise AttributeError(translate('URL not associated with method in the controller, check {}').format(request.endpoint.name))
+        parameters = set()
+        for parameter in inspect_signature(method).parameters.values():
+            kwargs.setdefault(parameter.name, None)
+            parameters.add(parameter.name)
+        for key in kwargs.keys():
+            if key not in parameters:
+                del kwargs[key]
+        return method(*args, **kwargs)
 
     @property
     def origins(self):
@@ -174,12 +188,16 @@ class Controller(BaseClass):
             element = element.strip()
             if element:
                 origin_set.add(element)
-        if origin_set:
-            return origin_set
-        for element in (arguments['origins'] or '').strip().split(','):
-            element = element.strip()
-            if element:
-                origin_set.add(element)
+        if not origin_set:
+            for element in (arguments['origins'] or '').strip().split(','):
+                element = element.strip()
+                if element:
+                    origin_set.add(element)
+        if '*' in origin_set:
+            return set()
+        elif 'localhost' in origin_set:
+            origin_set.remove('localhost')
+            origin_set.add('127.0.0.1')
         return origin_set
 
     # noinspection PyUnusedLocal
@@ -187,7 +205,7 @@ class Controller(BaseClass):
         if request.endpoint.name.startswith('_') and not request.is_localhost() and (not request.authorization or request.authorization != token):
             raise Unauthorized()
         origins = self.origins
-        if origins and request.get_client_ip() not in origins and '*' not in origins:
+        if origins and request.get_client_ip() not in origins:
             raise Unauthorized()
 
     def __call__(self, values: Dict[str, Any]):
