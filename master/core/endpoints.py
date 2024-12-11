@@ -68,23 +68,24 @@ class Request(BaseClass, _Request):
         Reads and parses request parameters based on the Content-Type.
         Supports JSON, form-encoded, and multipart data.
         """
-        if self.method in ('GET', 'HEAD'):
-            return {}
-        content_type = self.headers.get('Content-Type', '')
-        try:
-            if not content_type or content_type.startswith('application/json'):
-                return self.json
-            is_form_method = self.method in ('PUT', 'POST', 'PATCH')
-            if content_type.startswith('application/x-www-form-urlencoded') and is_form_method:
-                return MultiDict(self.form).to_dict()
-            elif content_type.startswith('multipart/form-data') and is_form_method:
-                def stream_factory():
-                    return BytesIO(self.data)
-
-                _, form_data, _ = parse_form_data(environ=self.environ, stream_factory=stream_factory)
-                return MultiDict(form_data).to_dict()
-        except UnsupportedMediaType:
-            return {}
+        if self.method in ('PUT', 'POST', 'PATCH'):
+            stream_factory: Callable = lambda: BytesIO(self.data)
+            content_type = self.headers.get('Content-Type', '')
+            try:
+                if not content_type or content_type.startswith('application/json'):
+                    return self.json
+                if content_type.startswith('application/x-www-form-urlencoded'):
+                    return MultiDict(self.form).to_dict()
+                elif content_type.startswith('multipart/form-data'):
+                    _, form_data, _ = parse_form_data(environ=self.environ, stream_factory=stream_factory)
+                    return MultiDict(form_data).to_dict()
+            except UnsupportedMediaType:
+                if not content_type:
+                    if self.form:
+                        return MultiDict(self.form).to_dict()
+                    elif self.data:
+                        _, form_data, _ = parse_form_data(environ=self.environ, stream_factory=stream_factory)
+                        return MultiDict(form_data).to_dict()
         return {}
 
     def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
