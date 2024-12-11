@@ -41,16 +41,19 @@ class Request(BaseClass, _Request):
         self.endpoint: Optional[Endpoint] = None
         setattr(local, 'request', self)
 
-    def get_client_ip(self) -> str:
+    def get_client_ip(self) -> Optional[str]:
         """
         Extract the client's IP address, considering proxies.
         """
         # Check for the X-Forwarded-For header (proxies)
-        if 'X-Forwarded-For' in self.headers:
+        proxy_header = 'X-Forwarded-For'
+        if self.headers.get(proxy_header):
             # Split the header to get the first IP (original client)
-            forwarded_ips = self.headers['X-Forwarded-For'].split(',')
-            original_ip = forwarded_ips[0].strip()
-            return original_ip
+            for ip in self.headers[proxy_header].split(','):
+                client_ip = ip and ip.strip() or ''
+                if not client_ip:
+                    continue
+                return client_ip
         # Fallback to remote address if no proxy header exists
         return self.remote_addr
 
@@ -58,7 +61,7 @@ class Request(BaseClass, _Request):
         """
         Check if the IP address is localhost.
         """
-        localhost_ips = {'127.0.0.1', '::1'}
+        localhost_ips: Set[str] = {'127.0.0.1', '::1'}
         if signature['public_ip']:
             localhost_ips.add(signature['public_ip'])
         return self.get_client_ip() in localhost_ips
