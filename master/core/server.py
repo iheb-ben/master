@@ -6,7 +6,7 @@ from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
-from master.api import ThreadSafeVariable, lazy_classproperty
+from master.api import ThreadSafeVariable, lazy_classproperty, check_lock
 from master.core import arguments
 from master.core.db import postgres_admin_connection, mongo_admin_connection
 from master.core.endpoints import Controller
@@ -31,10 +31,27 @@ class RequestHandler(WSGIRequestHandler):
         _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code} - {size}')
 
 
+class Counter(ThreadSafeVariable):
+    def __init__(self):
+        super().__init__(0)
+
+    @check_lock
+    def increase(self):
+        self._value += 1
+        return self._value
+
+    @check_lock
+    def decrease(self):
+        self._value -= 1
+        if self._value < 0:
+            self._value = 0
+        return self._value
+
+
 class Server:
     __slots__ = '_server'
     loading = ThreadSafeVariable(False)
-    requests_count = ThreadSafeVariable(0)
+    requests_count = Counter()
 
     def __init__(self):
         self._server = None
@@ -77,10 +94,10 @@ class Server:
             attempt -= 1
         if self.loading.get_value():
             yield controller.with_exception(ServiceUnavailable())
-        elif self.requests_count.get_value() >= self.max_threads_number:
+        elif self.requests_count.increase() > self.max_threads_number:
             yield controller.with_exception(TooManyRequests())
+            self.requests_count.decrease()
         else:
-            self.requests_count.set_value(self.requests_count.get_value() + 1)
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
             try:
                 request.endpoint, values = adapter.match()
@@ -95,7 +112,7 @@ class Server:
             except Exception:
                 raise
             finally:
-                self.requests_count.set_value(self.requests_count.get_value() - 1)
+                self.requests_count.decrease()
 
     def __call__(self, *args, **kwargs):
         request = classes.Request(*args, **kwargs)

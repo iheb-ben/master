@@ -6,6 +6,8 @@ from master.tools.collection import is_complex_iterable
 
 
 class ThreadSafeVariable:
+    __slots__ = ('_value', '_lock')
+
     def __init__(self, initial_value=None):
         self._value = initial_value
         self._lock = threading.RLock()
@@ -81,17 +83,16 @@ class lazy_classproperty(classproperty):
     def __read_name(self, owner: Type[object]):
         return f'{owner.__module__}.{owner.__name__}.{self._name}'
 
+    @check_lock
     def __get__(self, instance: Optional[object], owner: Type[object]) -> Any:
         func_name = self.__read_name(owner)
-        with self._lock:
-            if func_name not in self._register:
-                self._register[func_name] = super().__get__(instance, owner)
-            return self._register[func_name]
+        if func_name not in self._register:
+            self._register[func_name] = super().__get__(instance, owner)
+        return self._register[func_name]
 
+    @check_lock
     def __set__(self, instance: object, value: Any) -> None:
-        func_name = self.__read_name(instance.__class__)
-        with self._lock:
-            self._register[func_name] = value
+        self._register[self.__read_name(instance.__class__)] = value
 
 
 def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None):
