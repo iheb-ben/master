@@ -18,7 +18,7 @@ def check_lock(func: Callable):
 class ThreadSafeVariable:
     __slots__ = ('_value', '_lock')
 
-    def __init__(self, initial_value=None):
+    def __init__(self, initial_value: Optional[Any] = None):
         self._value = initial_value
         self._lock = threading.RLock()
 
@@ -29,7 +29,7 @@ class ThreadSafeVariable:
 
     @value.setter
     @check_lock
-    def value(self, value):
+    def value(self, value: Optional[Any] = None):
         self._value = value
 
 
