@@ -83,20 +83,26 @@ class Server:
             self.requests_count.set_value(self.requests_count.get_value() + 1)
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
             try:
-                endpoint, values = adapter.match()
-                request.endpoint = endpoint
+                request.endpoint, values = adapter.match()
             except NotFound:
                 values = {}
-            if request.endpoint:
-                values.update(request.read_parameters())
-                yield controller(values)
-            else:
-                yield controller.with_exception(NotFound())
-            self.requests_count.set_value(self.requests_count.get_value() - 1)
+            try:
+                if request.endpoint:
+                    values.update(request.read_parameters())
+                    yield controller(values)
+                else:
+                    yield controller.with_exception(NotFound())
+            except Exception:
+                raise
+            finally:
+                self.requests_count.set_value(self.requests_count.get_value() - 1)
 
     def __call__(self, *args, **kwargs):
         request = classes.Request(*args, **kwargs)
-        with self.dispatch_request(request) as response:
-            closing_iterator = response(*args, **kwargs)
-        del request
-        return closing_iterator
+        try:
+            with self.dispatch_request(request) as response:
+                return response(*args, **kwargs)
+        except Exception:
+            raise
+        finally:
+            del request
