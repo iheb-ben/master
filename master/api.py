@@ -72,16 +72,11 @@ class classproperty:
 # noinspection PyPep8Naming
 class lazy_classproperty(classproperty):
     """A lazy, cached class-level property."""
-    __slots__ = ('__func__', '_name')
     _register: Dict[str, Any] = {}
     _lock = threading.RLock()
 
-    def __init__(self, func: Callable):
-        super().__init__(func)
-        self._name = func.__name__
-
     def __read_name(self, owner: Type[object]):
-        return f'{owner.__module__}.{owner.__name__}.{self._name}'
+        return f'{owner.__module__}.{owner.__qualname__}.{self.__func__.__name__}'
 
     @check_lock
     def __get__(self, instance: Optional[object], owner: Type[object]) -> Any:
