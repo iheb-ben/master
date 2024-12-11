@@ -73,7 +73,7 @@ class Request(BaseClass, _Request):
         try:
             if not content_type or content_type.startswith('application/json'):
                 return self.json
-            elif content_type.startswith('application/x-www-form-urlencoded'):
+            elif content_type.startswith('application/x-www-form-urlencoded') and self.method in ('PUT', 'POST', 'PATCH'):
                 return MultiDict(self.form).to_dict()
             elif content_type.startswith('multipart/form-data') and self.method in ('PUT', 'POST', 'PATCH'):
                 def stream_factory():
