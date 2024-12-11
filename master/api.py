@@ -8,10 +8,10 @@ from master.tools.collection import is_complex_iterable
 def check_lock(func: Callable):
     @wraps(func)
     def _wrapper(self, *args, **kwargs):
-        if not hasattr(self, '_lock'):
-            raise AttributeError('Instance must have "_lock" attribute for thread safety.')
-        with getattr(self, '_lock'):
-            return func(self, *args, **kwargs)
+        if hasattr(self, '_lock'):
+            with self._lock:
+                return func(self, *args, **kwargs)
+        return func(self, *args, **kwargs)
     return _wrapper
 
 
