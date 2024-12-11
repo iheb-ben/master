@@ -89,10 +89,10 @@ class Server:
     @contextmanager
     def dispatch_request(self, request):
         attempt = 60
-        while self.loading.get_value() and attempt >= 0:
+        while self.loading.value and attempt >= 0:
             time.sleep(1)
             attempt -= 1
-        if self.loading.get_value():
+        if self.loading.value:
             yield controller.with_exception(ServiceUnavailable())
         elif self.requests_count.increase() > self.max_threads_number:
             try:
