@@ -83,13 +83,14 @@ class ClassManager:
         Registers a class to the appropriate module path registry.
         """
         call_classmethod(cls, '_before_register')
-        if cls.__meta__:
-            if cls.__meta__ not in ClassManager._registry:
-                ClassManager._registry[cls.__meta__] = ModuleClassRegistry()
-            ClassManager._registry[cls.__meta__].register_class(cls)
+        class_meta = cls.__meta__
+        if class_meta:
+            if class_meta not in ClassManager._registry:
+                ClassManager._registry[class_meta] = ModuleClassRegistry()
+            ClassManager._registry[class_meta].register_class(cls)
             meta = f'{cls.__module__}.{cls.__qualname__}'
-            if meta != cls.__meta__:
-                _logger.debug(f'Registered class "{meta}" under meta_path "{cls.__meta__}"')
+            if meta != class_meta:
+                _logger.debug(f'Registered class "{meta}" under meta_path "{class_meta}"')
             call_classmethod(cls, '_after_register')
         else:
             call_classmethod(cls, '_ignore_register')
@@ -102,7 +103,9 @@ class ClassManager:
         """
         if not base_classes:
             raise ValueError('Base classes are required to create a merged class.')
-        return type(new_class_name, tuple(base_classes), options or {})
+        options = options or {}
+        options['__meta__'] = None
+        return type(new_class_name, tuple(base_classes), options)
 
     @staticmethod
     def filter_unique_classes(modules: Iterable[str], registry: ModuleClassRegistry) -> List[Type[Any]]:

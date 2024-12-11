@@ -83,7 +83,7 @@ class Server:
                                    request_handler=RequestHandler,
                                    threaded=self.max_threads_number > 1)
         # Set a timeout (2 seconds) to check for the stop event periodically
-        self._server.timeout = 2
+        self._server.timeout = 1
         run_event.set()
 
     @contextmanager
