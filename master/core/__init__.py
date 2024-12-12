@@ -1,10 +1,12 @@
 import platform
-from master import tools
 from . import parser
 
 # Initiate global values
 arguments = parser.ArgumentParser().parse()
-signature = {
+
+from master import tools
+
+signature = tools.collection.ImmutableDict({
     'mode': arguments['mode'],
     'node_type': arguments['node_type'],
     'os_name': platform.system(),
@@ -16,7 +18,7 @@ signature = {
     'mac_address': tools.ip.get_mac_address(),
     'python': platform.python_version(),
     'version': '1.0.0',
-}
+})
 
 from . import logging
 from . import threads

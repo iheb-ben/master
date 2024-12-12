@@ -23,6 +23,9 @@ class ImmutableDict(Mapping):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}({self._data})"
 
+    def copy(self) -> dict:
+        return self._data.copy()
+
     # Prevent any modifications
     def __setitem__(self, key: Any, value: Any) -> None:
         raise TypeError(f"{self.__class__.__name__} is immutable")
