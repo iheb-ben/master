@@ -77,7 +77,7 @@ class Request(BaseClass, _Request):
             try:
                 if not content_type or content_type.startswith('application/json'):
                     return self.json
-                if content_type.startswith('application/x-www-form-urlencoded'):
+                elif content_type.startswith('application/x-www-form-urlencoded'):
                     return MultiDict(self.form).to_dict()
                 elif content_type.startswith('multipart/form-data'):
                     _, form_data, _ = parse_form_data(environ=self.environ, stream_factory=stream_factory)
