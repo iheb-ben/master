@@ -1,6 +1,49 @@
 from collections import OrderedDict
-from collections.abc import Iterable
-from typing import Optional, Any, Iterator
+from collections.abc import Iterable, Mapping
+from typing import Optional, Any, Iterator, Dict
+
+
+class ImmutableDict(Mapping):
+    """
+    A truly immutable dictionary implementation.
+    """
+
+    def __init__(self, initial_dict: Optional[Dict[Any, Any]] = None):
+        self._data = initial_dict or {}
+
+    def __getitem__(self, key: Any) -> Any:
+        return self._data[key]
+
+    def __iter__(self) -> Iterator[Any]:
+        return iter(self._data)
+
+    def __len__(self) -> int:
+        return len(self._data)
+
+    def __repr__(self) -> str:
+        return f"{self.__class__.__name__}({self._data})"
+
+    # Prevent any modifications
+    def __setitem__(self, key: Any, value: Any) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def __delitem__(self, key: Any) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def clear(self) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def update(self, *args, **kwargs) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def pop(self, key: Any, default: Any = None) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def popitem(self) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
+
+    def setdefault(self, key: Any, default: Any = None) -> None:
+        raise TypeError(f"{self.__class__.__name__} is immutable")
 
 
 def is_complex_iterable(obj: Any) -> bool:
@@ -16,7 +59,7 @@ class OrderedSet(Iterable):
     """
     __slots__ = '_data'
 
-    def __init__(self, iterable: Optional[Any] = None):
+    def __init__(self, iterable: Any = None):
         """Initializes an OrderedSet, optionally with elements from an iterable."""
         self._data = OrderedDict()
         if iterable:

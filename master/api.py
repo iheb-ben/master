@@ -2,7 +2,7 @@ from functools import wraps
 from typing import Callable, Any, Type, Dict, Optional, Union, List, Iterable
 import threading
 
-from master.tools.collection import is_complex_iterable
+from master.tools.collection import is_complex_iterable, ImmutableDict
 
 
 def check_lock(func: Callable):
@@ -18,7 +18,7 @@ def check_lock(func: Callable):
 class ThreadSafeVariable:
     __slots__ = ('_value', '_lock')
 
-    def __init__(self, initial_value: Optional[Any] = None):
+    def __init__(self, initial_value: Any = None):
         self._value = initial_value
         self._lock = threading.RLock()
 
@@ -29,7 +29,7 @@ class ThreadSafeVariable:
 
     @value.setter
     @check_lock
-    def value(self, value: Optional[Any] = None):
+    def value(self, value: Any = None):
         self._value = value
 
 
@@ -117,13 +117,13 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
     assert not content or isinstance(content, str)
 
     def _(func: Callable):
-        Endpoint.register(urls, func, {
+        Endpoint.register(urls, func, ImmutableDict({
             'auth': auth,
             'methods': methods,
             'mode': mode,
             'origins': origins,
             'content': content,
-        })
+        }))
         return func
     return _
 

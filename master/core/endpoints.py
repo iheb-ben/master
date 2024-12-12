@@ -2,7 +2,7 @@ import json
 from inspect import Parameter, signature as inspect_signature
 from io import BytesIO
 from pathlib import Path
-from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set
+from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set, Mapping
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, InternalServerError
 from werkzeug.formparser import parse_form_data
@@ -115,8 +115,8 @@ class Response(BaseClass, _Response):
 class Endpoint:
     __slots__ = ('name', 'modules', 'parameters')
 
-    def __init__(self, func: Callable, parameters: Dict[str, Any]):
-        self.parameters: Dict[str, Any] = parameters
+    def __init__(self, func: Callable, parameters: Mapping[str, Any]):
+        self.parameters: Mapping[str, Any] = parameters
         self.name: str = func.__name__
         self.modules: Set[str] = set()
         module = self.module_name(func)
@@ -138,7 +138,7 @@ class Endpoint:
                 del methods[url]
 
     @classmethod
-    def register(cls, urls: Union[str, List[str]], func: Callable, parameters: Dict[str, Any]):
+    def register(cls, urls: Union[str, List[str]], func: Callable, parameters: Mapping[str, Any]):
         if not is_complex_iterable(urls):
             urls = [urls]
         for url in urls:
