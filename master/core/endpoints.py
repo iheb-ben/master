@@ -109,7 +109,10 @@ class Request(BaseClass, _Request):
 
 
 class Response(BaseClass, _Response):
-    pass
+    def __call__(self, *args, **kwargs):
+        if not self.data and self.status_code == 200:
+            self.status_code = 204
+        return super().__call__(*args, **kwargs)
 
 
 class Endpoint:
