@@ -41,6 +41,10 @@ class Request(BaseClass, _Request):
         self.endpoint: Optional[Endpoint] = None
         setattr(local, 'request', self)
 
+    @property
+    def csrf_token(self):
+        return self.headers.get('X-CSRFToken')
+
     def get_client_ip(self) -> Optional[str]:
         """
         Extract the client's IP address, considering proxies.
@@ -210,10 +214,16 @@ class Controller(BaseClass):
 
     # noinspection PyUnusedLocal
     def authorize(self, *args, **kwargs):
+        if request.endpoint.parameters['csrf']:
+            if not request.csrf_token:
+                raise Unauthorized()
+            else:
+                # TODO: Validate the crsf token
+                pass
         if request.endpoint.name.startswith('_') and not request.is_localhost() and (not request.authorization or request.authorization != token):
             raise Unauthorized()
-        origins = self.origins
-        if origins and request.get_client_ip() not in origins:
+        origins_set = self.origins
+        if origins_set and request.get_client_ip() not in origins_set:
             raise Unauthorized()
 
     def __call__(self, values: Dict[str, Any]):

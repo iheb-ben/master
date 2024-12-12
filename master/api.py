@@ -92,7 +92,7 @@ class lazy_classproperty(classproperty):
         self._register[self.__read_name(instance.__class__)] = value
 
 
-def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None, content: Optional[str] = None):
+def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None, content: Optional[str] = None, csrf: bool = False):
     from master.core.parser import PipelineMode
     from master.core.endpoints import Endpoint
     if not auth:
@@ -123,6 +123,7 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
             'mode': mode,
             'origins': origins,
             'content': content,
+            'csrf': csrf,
         }))
         return func
     return _
