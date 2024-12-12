@@ -6,6 +6,7 @@ from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
+from master import request
 from master.api import ThreadSafeVariable, lazy_classproperty, check_lock
 from master.core import arguments
 from master.core.db import postgres_admin_connection, mongo_admin_connection
@@ -24,28 +25,43 @@ controller: Optional[Controller] = None
 
 class RequestHandler(WSGIRequestHandler):
     def log_request(self, code='*', size='*'):
-        remote_addr = self.client_address[0]  # Client's IP address
+        remote_addr = request.get_client_ip()  # Client's IP address
         method = self.command  # HTTP method (e.g., GET, POST)
         path = self.path  # Requested URL path
         http_version = self.request_version  # HTTP version
-        _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code} - {size}')
+        _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code}')
 
 
 class Counter(ThreadSafeVariable):
+    __slots__ = tuple(['_ips'] + list(ThreadSafeVariable.__slots__))
+
     def __init__(self):
         super().__init__(0)
+        self._ips: Dict[str, int] = {}
 
     @check_lock
-    def increase(self):
+    def increase(self) -> None:
         self._value += 1
-        return self._value
+        ip = request.get_client_ip()
+        if ip and not request.is_localhost():
+            self._ips.setdefault(ip, 0)
+            self._ips[ip] += 1
 
     @check_lock
-    def decrease(self):
+    def decrease(self) -> None:
         self._value -= 1
         if self._value < 0:
             self._value = 0
-        return self._value
+        ip = request.get_client_ip()
+        if ip and not request.is_localhost():
+            if ip in self._ips:
+                self._ips[ip] -= 1
+            if self._ips[ip] <= 0:
+                del self._ips[ip]
+
+    @check_lock
+    def check(self, value: int) -> bool:
+        return self._value > value or self._ips.get(request.get_client_ip(), 0) > 10
 
 
 class Server:
@@ -87,14 +103,15 @@ class Server:
         run_event.set()
 
     @contextmanager
-    def dispatch_request(self, request):
+    def dispatch_request(self):
         attempt = 60
         while self.loading.value and attempt >= 0:
             time.sleep(1)
             attempt -= 1
         if self.loading.value:
             yield controller.with_exception(ServiceUnavailable())
-        elif self.requests_count.increase() > self.max_threads_number:
+        self.requests_count.increase()
+        if self.requests_count.check(self.max_threads_number):
             try:
                 yield controller.with_exception(TooManyRequests())
             finally:
@@ -115,9 +132,6 @@ class Server:
                 self.requests_count.decrease()
 
     def __call__(self, *args, **kwargs):
-        request = classes.Request(*args, **kwargs)
-        try:
-            with self.dispatch_request(request) as response:
-                return response(*args, **kwargs)
-        finally:
-            del request
+        classes.Request(*args, **kwargs)
+        with self.dispatch_request() as response:
+            return response(*args, **kwargs)

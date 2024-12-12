@@ -4,7 +4,7 @@ from io import BytesIO
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set, Mapping
 from werkzeug.datastructures import MultiDict
-from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, InternalServerError
+from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, Forbidden
 from werkzeug.formparser import parse_form_data
 from werkzeug.local import Local
 from werkzeug.routing import Rule
@@ -216,7 +216,7 @@ class Controller(BaseClass):
     def authorize(self, *args, **kwargs):
         if request.endpoint.parameters['csrf']:
             if not request.csrf_token:
-                raise Unauthorized()
+                raise Forbidden()
             else:
                 # TODO: Validate the crsf token
                 pass
@@ -224,7 +224,7 @@ class Controller(BaseClass):
             raise Unauthorized()
         origins_set = self.origins
         if origins_set and request.get_client_ip() not in origins_set:
-            raise Unauthorized()
+            raise Forbidden()
 
     def __call__(self, values: Dict[str, Any]):
         try:
