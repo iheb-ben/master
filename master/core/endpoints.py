@@ -126,13 +126,14 @@ class Endpoint:
     @staticmethod
     def module_name(func: Callable) -> Optional[str]:
         module: str = func.__module__
-        if module.startswith('master.addons.'):
-            return module.split('.')[2]
+        module_path = 'master.addons.'
+        if module.startswith(module_path):
+            return module[len(module_path):].split('.')[0]
         else:
             return None
 
-    @classmethod
-    def clear(cls, func: Callable):
+    @staticmethod
+    def clear(func: Callable):
         for url in list(methods.keys()):
             if url in methods and methods[url].name == func.__name__:
                 del methods[url]
