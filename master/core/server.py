@@ -1,6 +1,6 @@
 import logging
 import time
-from typing import Optional, List, Any
+from typing import Optional, List, Any, Union
 from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
@@ -23,13 +23,12 @@ controller: Optional[Controller] = None
 
 
 class RequestHandler(WSGIRequestHandler):
-    def log_request(self, code='*', size='*'):
-        remote_addr = request.get_client_ip()  # Client's IP address
+    def log_request(self, code: Union[int, str] = '*', size: Union[int, str] = '*'):
+        remote_addr = self.client_address[0]  # Client's IP address
         method = self.command  # HTTP method (e.g., GET, POST)
         path = self.path  # Requested URL path
         http_version = self.request_version  # HTTP version
         _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code}')
-        del local.request
 
 
 class Counter(ThreadSafeVariable):
@@ -130,3 +129,4 @@ class Server:
             return self.dispatch_request()(environ, start_response)
         finally:
             self.requests_count.decrease()
+            del local.request
