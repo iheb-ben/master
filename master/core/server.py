@@ -1,7 +1,6 @@
 import logging
 import time
-from contextlib import contextmanager
-from typing import Optional, List
+from typing import Optional, List, Any
 from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
@@ -95,43 +94,38 @@ class Server:
             master.mongo_db_manager = classes.MongoDBManager(arguments['db_name'])
         self._server = make_server(host='localhost',
                                    port=arguments['port'],
-                                   app=lambda *args, **kwargs: self(*args, **kwargs),
+                                   app=self.__call__,
                                    request_handler=RequestHandler,
                                    threaded=self.max_threads_number > 1)
-        # Set a timeout (2 seconds) to check for the stop event periodically
+        # Set a timeout (1 seconds) to check for the stop event periodically
         self._server.timeout = 1
         run_event.set()
 
-    @contextmanager
     def dispatch_request(self):
+        if self.requests_count.check(self.max_threads_number):
+            return controller.with_exception(TooManyRequests())
         attempt = 60
         while self.loading.value and attempt >= 0:
             time.sleep(1)
             attempt -= 1
         if self.loading.value:
-            yield controller.with_exception(ServiceUnavailable())
-        self.requests_count.increase()
-        if self.requests_count.check(self.max_threads_number):
-            try:
-                yield controller.with_exception(TooManyRequests())
-            finally:
-                self.requests_count.decrease()
+            return controller.with_exception(ServiceUnavailable())
         else:
             adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
             try:
                 request.endpoint, values = adapter.match()
             except NotFound:
                 values = {}
-            try:
-                if request.endpoint:
-                    values.update(request.read_parameters())
-                    yield controller(values)
-                else:
-                    yield controller.with_exception(NotFound())
-            finally:
-                self.requests_count.decrease()
+            if request.endpoint:
+                values.update(request.read_parameters())
+                return controller(values)
+            else:
+                return controller.with_exception(NotFound())
 
-    def __call__(self, *args, **kwargs):
-        classes.Request(*args, **kwargs)
-        with self.dispatch_request() as response:
-            return response(*args, **kwargs)
+    def __call__(self, environ, start_response) -> Any:
+        classes.Request(environ, start_response)
+        self.requests_count.increase()
+        try:
+            return self.dispatch_request()(environ, start_response)
+        finally:
+            self.requests_count.decrease()
