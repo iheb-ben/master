@@ -1,4 +1,5 @@
 import argparse
+import datetime
 import sys
 import json
 import logging
@@ -182,6 +183,11 @@ class ParsedArguments:
         save_configuration(_path, self.arguments)
 
 
+def _default_log_file_path(mode: str) -> str:
+    filename = f'{datetime.datetime.utcnow().strftime("%Y_%m_%d")}.log'
+    return str(temporairy_directory() / 'logs' / mode / filename)
+
+
 class ArgumentParser:
     """Parses and validates command-line arguments."""
     def __init__(self):
@@ -199,7 +205,7 @@ class ArgumentParser:
         self._parser.add_argument('--master-password', type=str, help='Master password')
         self._parser.add_argument('--addons-paths', nargs='+', type=str, help='Addons paths')
         self._parser.add_argument('--directory', type=str, default=str(temporairy_directory()), help='Path to ERP directory folder')
-        self._parser.add_argument('--log-file', type=str, default=str(temporairy_directory().joinpath('master.log')), help='Log file path')
+        self._parser.add_argument('--log-file', type=str, help='Log file path')
         self._parser.add_argument('--log-level', choices=[e.value for e in LoggerType], default=LoggerType.INFO.value, help='Log level')
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
@@ -245,6 +251,9 @@ class ArgumentParser:
             parsed.arguments['jwt_secret'] = parsed.jwt_secret
         if not parsed.arguments['pipeline_interval'] or parsed.arguments['pipeline_interval'] <= 0:
             parsed.arguments['pipeline_interval'] = 1
+        if not parsed.arguments['log_file']:
+            current = parsed.arguments['pipeline'] and parsed.arguments['pipeline_mode'] or PipelineMode.INSTANCE.value
+            parsed.arguments['log_file'] = _default_log_file_path(current)
         if parsed.arguments['log_file']:
             _create_file(Path(parsed.arguments['log_file']))
         if parsed.arguments['directory']:
@@ -257,9 +266,10 @@ class ArgumentParser:
 
 def _create_file(path: Path):
     if not path.is_file():
+        _create_directory(path.parent)
         path.touch()
 
 
 def _create_directory(path: Path):
     if not path.is_dir():
-        path.mkdir()
+        path.mkdir(parents=True)

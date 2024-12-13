@@ -9,7 +9,7 @@ from master import request
 from master.api import ThreadSafeVariable, lazy_classproperty, check_lock
 from master.core import arguments
 from master.core.db import postgres_admin_connection, mongo_admin_connection
-from master.core.endpoints import Controller
+from master.core.endpoints import Controller, local
 from master.core.modules import default_installed_modules
 from master.core.parser import PipelineMode
 from master.core.registry import ClassManager
@@ -29,6 +29,7 @@ class RequestHandler(WSGIRequestHandler):
         path = self.path  # Requested URL path
         http_version = self.request_version  # HTTP version
         _logger.info(f'{remote_addr} - "{method} {path} {http_version}" {code}')
+        del local.request
 
 
 class Counter(ThreadSafeVariable):
