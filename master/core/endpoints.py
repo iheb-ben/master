@@ -43,7 +43,10 @@ class Request(BaseClass, _Request):
 
     @property
     def csrf_token(self):
-        return self.headers.get('X-CSRFToken')
+        values = self.read_parameters()
+        if self.method not in ('PUT', 'POST', 'PATCH'):
+            values.setdefault('csrf_token', self.headers.get('X-CSRFToken', None))
+        return values.get('csrf_token')
 
     def get_client_ip(self) -> Optional[str]:
         """
