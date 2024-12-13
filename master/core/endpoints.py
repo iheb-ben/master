@@ -173,7 +173,7 @@ class Controller(BaseClass):
         method_name = f'_page_{status}'
         if request.accept_mimetypes.accept_html and hasattr(self, method_name):
             return getattr(self, method_name)(error)
-        return request.send_response(status, translate(str(error)))
+        return request.send_response(status=status, content=translate(str(error)))
 
     def with_exception(self, error: Exception):
         if isinstance(error, HTTPException) and hasattr(error, 'code'):
