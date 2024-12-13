@@ -11,6 +11,7 @@ from werkzeug.routing import Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
 
 from master import request
+from master.api import lazy_property
 from master.core import arguments, signature
 from master.core.db import translate
 from master.core.git import token
@@ -41,12 +42,12 @@ class Request(BaseClass, _Request):
         self.endpoint: Optional[Endpoint] = None
         setattr(local, 'request', self)
 
-    @property
-    def csrf_token(self):
+    @lazy_property
+    def csrf_token(self) -> Optional[str]:
         values = self.read_parameters()
-        if self.method not in ('PUT', 'POST', 'PATCH'):
-            values.setdefault('csrf_token', self.headers.get('X-CSRFToken', None))
-        return values.get('csrf_token')
+        values.setdefault('csrf_token', self.headers.get('X-CSRFToken', None))
+        _csrf_token = values.get('csrf_token')
+        return _csrf_token and _csrf_token.strip() or None
 
     def get_client_ip(self) -> Optional[str]:
         """
