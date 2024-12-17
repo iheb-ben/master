@@ -118,7 +118,7 @@ class Endpoint:
 
     def __init__(self, func: Callable, parameters: Mapping[str, Any]):
         self.parameters: Mapping[str, Any] = parameters
-        self.name: str = func.__name__
+        self.name: Union[str, Callable] = func.__name__ if len(func.__qualname__.split('.')) > 1 else func
         self.modules: Set[str] = set()
         module = self.module_name(func)
         if module:
@@ -175,7 +175,11 @@ class Controller(BaseClass):
         raise error
 
     def middleware(self, *args, **kwargs):
-        method = getattr(self, request.endpoint.name, None)
+        method = None
+        if isinstance(request.endpoint.name, str):
+            method = getattr(self, request.endpoint.name, None)
+        elif callable(request.endpoint.name):
+            method = request.endpoint.name
         if not method:
             raise AttributeError(translate('URL not associated with method in the controller, check {}').format(request.endpoint.name))
         parameters = set()
