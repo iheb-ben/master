@@ -2,8 +2,10 @@ from datetime import datetime
 from typing import AnyStr
 from werkzeug.routing import BaseConverter
 
+from master.core.registry import BaseClass
 
-class DateTimeConverter(BaseConverter):
+
+class DateTimeConverter(BaseClass, BaseConverter):
     """
     A custom URL converter for handling datetime objects in URLs.
     """

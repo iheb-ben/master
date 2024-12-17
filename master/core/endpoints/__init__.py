@@ -248,5 +248,6 @@ class Controller(BaseClass):
 
     def map_urls(self, modules: List[str], converters: Optional[Mapping[str, Type[BaseConverter]]] = None) -> Map:
         converters = converters or {}
-        converters.setdefault('datetime', system_converters.DateTimeConverter)
+        from master.core.server import classes
+        converters.setdefault('datetime', classes.DateTimeConverter)
         return Map(rules=self.map_rules(modules), converters=converters, merge_slashes=True)
