@@ -2,12 +2,12 @@ import json
 from inspect import Parameter, signature as inspect_signature
 from io import BytesIO
 from pathlib import Path
-from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set, Mapping
+from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set, Mapping, Type
 from werkzeug.datastructures import MultiDict
 from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, Forbidden
 from werkzeug.formparser import parse_form_data
 from werkzeug.local import Local
-from werkzeug.routing import Rule, Map
+from werkzeug.routing import Rule, Map, BaseConverter
 from werkzeug.wrappers import Request as _Request, Response as _Response
 
 from master import request
@@ -19,7 +19,7 @@ from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
 from master.tools.collection import is_complex_iterable
 
-from . import converters
+from . import converters as system_converters
 
 methods = {}
 local = Local()
@@ -233,7 +233,7 @@ class Controller(BaseClass):
             response = request.send_response(content=response)
         return response
 
-    def read_urls(self, modules: List[str]) -> List[Rule]:
+    def map_rules(self, modules: List[str]) -> List[Rule]:
         if arguments['pipeline']:
             endpoint_type = arguments['pipeline_mode']
         else:
@@ -246,7 +246,7 @@ class Controller(BaseClass):
                 urls.append(Rule(url, endpoint=endpoint, methods=endpoint.parameters['methods']))
         return urls
 
-    def build_map_urls(self, modules: List[str]) -> Map:
-        urls = Map(self.read_urls(modules))
-        urls.converters['datetime'] = converters.DateTimeConverter
-        return urls
+    def map_urls(self, modules: List[str], converters: Optional[Mapping[str, Type[BaseConverter]]] = None) -> Map:
+        converters = converters or {}
+        converters.setdefault('datetime', system_converters.DateTimeConverter)
+        return Map(rules=self.map_rules(modules), converters=converters, merge_slashes=True)

@@ -110,7 +110,7 @@ class Server:
         if self.loading.value:
             return controller.with_exception(ServiceUnavailable())
         else:
-            adapter = controller.build_map_urls(modules).bind_to_environ(request.environ)
+            adapter = controller.map_urls(modules).bind_to_environ(request.environ)
             try:
                 request.endpoint, values = adapter.match()
             except NotFound:
