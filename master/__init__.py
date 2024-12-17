@@ -1,7 +1,4 @@
-import signal
 import time
-import traceback
-import sys
 import logging
 from typing import Optional
 

@@ -2,7 +2,6 @@ import logging
 import time
 from typing import Optional, List, Any, Union
 from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
-from werkzeug.routing import Map
 from werkzeug.serving import make_server, WSGIRequestHandler
 
 from master import request
@@ -111,7 +110,7 @@ class Server:
         if self.loading.value:
             return controller.with_exception(ServiceUnavailable())
         else:
-            adapter = Map(controller.map_urls(modules)).bind_to_environ(request.environ)
+            adapter = controller.build_map_urls(modules).bind_to_environ(request.environ)
             try:
                 request.endpoint, values = adapter.match()
             except NotFound:
