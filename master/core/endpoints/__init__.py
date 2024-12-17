@@ -191,7 +191,7 @@ class Controller(BaseClass):
                 del kwargs[key]
         return method(*args, **kwargs)
 
-    @property
+    @lazy_property
     def origins(self):
         origin_set = set()
         for element in (request.endpoint.parameters['origins'] or '').strip().split(','):

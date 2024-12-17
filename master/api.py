@@ -7,11 +7,12 @@ from master.tools.collection import is_complex_iterable, ImmutableDict
 
 def check_lock(func: Callable):
     @wraps(func)
-    def _wrapper(self, *args, **kwargs):
-        if hasattr(self, '_lock'):
-            with self._lock:
-                return func(self, *args, **kwargs)
-        return func(self, *args, **kwargs)
+    def _wrapper(*args, **kwargs):
+        if len(args) > 0 and hasattr(args[0], '_lock'):
+            # noinspection PyProtectedMember
+            with args[0]._lock:
+                return func(*args, **kwargs)
+        return func(*args, **kwargs)
     return _wrapper
 
 
