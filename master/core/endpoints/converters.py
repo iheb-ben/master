@@ -1,15 +1,19 @@
-from werkzeug.routing import BaseConverter, Map
+from datetime import datetime
+from typing import AnyStr
+from werkzeug.routing import BaseConverter
 
 
 class DateTimeConverter(BaseConverter):
     """
     A custom URL converter for handling datetime objects in URLs.
     """
-    def __init__(self, date_format='%Y-%m-%d', *args, **kwargs):
-        super().__init__(*args, **kwargs)
+
+    # noinspection PyShadowingBuiltins
+    def __init__(self, map, date_format='%Y-%m-%d', *args, **kwargs):
+        super().__init__(map, *args, **kwargs)
         self.date_format = date_format
 
-    def to_python(self, value):
+    def to_python(self, value: AnyStr):
         """
         Converts the URL string into a datetime object.
         """
@@ -18,7 +22,7 @@ class DateTimeConverter(BaseConverter):
         except ValueError:
             raise ValueError(f"Invalid date format: {value}. Expected {self.date_format}.")
 
-    def to_url(self, value):
+    def to_url(self, value: datetime):
         """
         Converts a datetime object back into a string for the URL.
         """
