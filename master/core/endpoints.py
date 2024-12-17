@@ -23,18 +23,6 @@ methods = {}
 local = Local()
 
 
-def generate_file_stream(file_path: str, chunk_size: int = 1024) -> Generator[bytes, None, None]:
-    """
-    Generate file content in chunks to stream it efficiently.
-    :param file_path: Path to the file to be streamed.
-    :param chunk_size: Size of each chunk in bytes.
-    :yield: Chunk of file content.
-    """
-    with open(file_path, 'rb') as file:
-        while chunk := file.read(chunk_size):
-            yield chunk
-
-
 # noinspection PyMethodMayBeStatic
 class Request(BaseClass, _Request):
     def __init__(self, *args, **kwargs):

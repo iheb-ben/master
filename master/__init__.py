@@ -4,11 +4,13 @@ import traceback
 import sys
 import logging
 from typing import Optional
-from werkzeug.local import LocalProxy
 
 from . import pip
 
 pip.install_requirements('./requirements.txt', True)
+
+from werkzeug.local import LocalProxy
+
 request = LocalProxy(lambda: getattr(core.endpoints.local, 'request', None))
 
 from . import exceptions

@@ -1,37 +1,35 @@
-"""
-This module provides utility functions to check the validity and availability of ports
-on the local machine. It includes functionality to find an available port within
-the allowed range of 1 to 65535.
-
-Functions:
-- port_in_range: Checks if a port number is within the valid range (1-65535).
-- port_is_available: Checks if a specific port is available for binding on localhost.
-- find_available_port: Finds the next available port starting from a given number.
-
-Global Variables:
-- _already_checked_ports: A set to keep track of ports that have already been checked.
-"""
-
 import socket
 import subprocess
+from typing import Generator
 import psutil
 
 
-def get_max_threads_windows():
-    virtual_memory = psutil.virtual_memory()
-    total_memory = virtual_memory.total
-    thread_stack_size = 2 * 1024 * 1024
-    max_threads = total_memory // thread_stack_size
-    return max_threads
-
-
 # noinspection PyBroadException
-def get_max_threads():
+def get_max_threads() -> int:
+    """
+    Determines the maximum number of threads that can be created on the current system.
+    On non-Windows systems, it tries to use the 'ulimit' command.
+    On Windows, it calculates the limit based on available memory and stack size.
+
+    Returns:
+        int: The maximum number of threads supported by the system.
+    """
+
+    def _get_max_threads_windows():
+        from master.core import arguments
+        virtual_memory = psutil.virtual_memory()
+        return virtual_memory.total // (arguments['thread_stack_size'] or 2 * 1024 * 1024)
+
     try:
         result = subprocess.run(['ulimit', '-u'], capture_output=True, text=True, shell=True)
-        return int(result.stdout.strip())
+        if result.returncode == 0 and result.stdout.strip():
+            return int(result.stdout.strip())
     except Exception:
-        return get_max_threads_windows()
+        pass
+    try:
+        return _get_max_threads_windows()
+    except Exception:
+        return 1
 
 
 # A global set to store already checked ports to avoid redundant checks
@@ -97,3 +95,15 @@ def find_available_port(port: int) -> int:
         else:
             break  # Port is available
     return port
+
+
+def generate_file_stream(file_path: str, chunk_size: int = 1024) -> Generator[bytes, None, None]:
+    """
+    Generate file content in chunks to stream it efficiently.
+    :param file_path: Path to the file to be streamed.
+    :param chunk_size: Size of each chunk in bytes.
+    :yield: Chunk of file content.
+    """
+    with open(file_path, 'rb') as file:
+        while chunk := file.read(chunk_size):
+            yield chunk

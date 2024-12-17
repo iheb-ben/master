@@ -54,6 +54,7 @@ class ArgumentsDict(TypedDict, total=False):
     port: int
     addons_paths: Union[List[str], str, None]
     directory: str
+    thread_stack_size: int
     pipeline: bool
     pipeline_mode: str
     pipeline_port: int
@@ -210,6 +211,7 @@ class ArgumentParser:
         self._parser.add_argument('--port', type=int, default=find_available_port(9000), help='ERP port')
         self._parser.add_argument('--jwt-secret', type=str, help='JWT secret key')
         self._parser.add_argument('--origins', type=str, help='Allow origins')
+        self._parser.add_argument('--thread-stack-size', type=int, default=2 * 1024 * 1024, help='The maximun thread stack size allowed for the system')
         # Pipeline settings
         pipeline_group = self._parser.add_argument_group('Pipeline Configuration', 'Pipeline-related settings')
         pipeline_group.add_argument('--pipeline', action='store_true', default=True, help='Enable pipeline mode')

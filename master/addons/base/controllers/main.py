@@ -4,9 +4,10 @@ from werkzeug.utils import secure_filename
 
 from master import request
 from master.api import route
-from master.core.endpoints import Controller, generate_file_stream
+from master.core.endpoints import Controller
 from master.core.modules import configurations, base_addon
 from master.core.parser import PipelineMode
+from master.tools.system import generate_file_stream
 
 
 # noinspection PyMethodMayBeStatic

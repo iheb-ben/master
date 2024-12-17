@@ -11,13 +11,7 @@ def install_requirements(requirement_file_path: Union[str, os.PathLike], require
     file_path = Path(requirement_file_path).absolute().resolve()
     if file_path.is_file():
         try:
-            subprocess.run(
-                [sys.executable, '-m', 'pip', 'install', '-r', str(file_path)],
-                check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', str(file_path)], check=True, text=True)
             _logger.info(f'Requirements from "{file_path}" installed successfully.')
         except subprocess.CalledProcessError as e:
             if required:
