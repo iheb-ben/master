@@ -249,7 +249,7 @@ class Controller(BaseClass):
                 urls.append(Rule(url, endpoint=endpoint, methods=endpoint.parameters['methods']))
         return urls
 
-    def map_urls(self, converters: Optional[Mapping[str, Type[BaseConverter]]] = None) -> Map:
+    def map_urls(self, converters: Optional[Dict[str, Type[BaseConverter]]] = None) -> Map:
         converters = converters or {}
         from master.core.server import classes, modules
         converters.setdefault('datetime', classes.DateTimeConverter)
