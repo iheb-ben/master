@@ -43,16 +43,15 @@ class Request(BaseClass, _Request):
         """
         Extract the client's IP address, considering proxies.
         """
-        # Check for the X-Forwarded-For header (proxies)
-        proxy_header = 'X-Forwarded-For'
-        if self.headers.get(proxy_header):
-            # Split the header to get the first IP (original client)
-            for ip in self.headers[proxy_header].split(','):
+        for header_key in ['X-Real-IP', 'X-Forwarded-For']:
+            header_value = self.headers.get(header_key)
+            if not header_value:
+                continue
+            for ip in header_value.split(','):
                 client_ip = ip and ip.strip() or ''
                 if not client_ip:
                     continue
                 return client_ip
-        # Fallback to remote address if no proxy header exists
         return self.remote_addr
 
     def is_localhost(self) -> bool:
@@ -250,8 +249,8 @@ class Controller(BaseClass):
                 urls.append(Rule(url, endpoint=endpoint, methods=endpoint.parameters['methods']))
         return urls
 
-    def map_urls(self, modules: List[str], converters: Optional[Mapping[str, Type[BaseConverter]]] = None) -> Map:
+    def map_urls(self, converters: Optional[Mapping[str, Type[BaseConverter]]] = None) -> Map:
         converters = converters or {}
-        from master.core.server import classes
+        from master.core.server import classes, modules
         converters.setdefault('datetime', classes.DateTimeConverter)
         return Map(rules=self.map_rules(modules), converters=converters, merge_slashes=True)
