@@ -21,20 +21,18 @@ from master.tools.collection import is_complex_iterable
 
 from . import converters as system_converters
 
-methods = {}
-local = Local()
-
 
 # noinspection PyMethodMayBeStatic
 class Request(BaseClass, _Request):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.endpoint: Optional[Endpoint] = None
+        self.values_dict: Dict[str, Any] = {}
         setattr(local, 'request', self)
 
     @lazy_property
     def csrf_token(self) -> Optional[str]:
-        values = self.read_parameters()
+        values = self.values_dict.copy()
         values.setdefault('csrf_token', self.headers.get('X-CSRFToken', None))
         _csrf_token = values.get('csrf_token')
         return _csrf_token and _csrf_token.strip() or None
@@ -88,7 +86,7 @@ class Request(BaseClass, _Request):
                         return MultiDict(form_data).to_dict()
         return {}
 
-    def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None):
+    def send_response(self, status: int = 200, content: Any = None, headers: Optional[Dict[str, Any]] = None, mimetype: Optional[str] = None) -> _Response:
         from master.core.server import classes
         headers = headers or {}
         if self.endpoint and self.endpoint.parameters['content']:
@@ -155,40 +153,40 @@ class Endpoint:
                     methods[url].modules.add(module)
 
 
+methods: Dict[str, Endpoint] = {}
+local = Local()
+
+
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
-    def _page_404(self, error: Exception):
+    def _page_404(self, error: Exception) -> _Response:
         return request.send_response(status=404,
                                      content=translate(str(error)),
                                      mimetype='text/html')
 
-    def raise_exception(self, status: int, error: Exception):
+    def raise_exception(self, status: int, error: Exception) -> _Response:
         method_name = f'_page_{status}'
         if request.accept_mimetypes.accept_html and hasattr(self, method_name):
             return getattr(self, method_name)(error)
         return request.send_response(status=status, content=translate(str(error)))
 
-    def with_exception(self, error: Exception):
+    def with_exception(self, error: Exception) -> _Response:
         if isinstance(error, HTTPException) and hasattr(error, 'code'):
             return self.raise_exception(error.code, error)
         raise error
 
-    def middleware(self, *args, **kwargs):
-        method = None
-        if isinstance(request.endpoint.name, str):
-            method = getattr(self, request.endpoint.name, None)
-        elif callable(request.endpoint.name):
-            method = request.endpoint.name
-        if not method:
-            raise AttributeError(translate('URL not associated with method in the controller, check {}').format(request.endpoint.name))
+    def middleware(self) -> Optional[_Response]:
+        method = getattr(self, request.endpoint.name, None)
+        if not method or not callable(method):
+            raise AttributeError(translate('URL not associated with method within the controller, check {}').format(request.endpoint.name))
         parameters = set()
         for parameter in inspect_signature(method).parameters.values():
-            kwargs.setdefault(parameter.name, None)
+            request.values_dict.setdefault(parameter.name, None)
             parameters.add(parameter.name)
-        for key in kwargs.keys():
+        for key in request.values_dict.keys():
             if key not in parameters:
-                del kwargs[key]
-        return method(*args, **kwargs)
+                del request.values_dict[key]
+        return method(**request.values_dict)
 
     @lazy_property
     def origins(self):
@@ -210,7 +208,7 @@ class Controller(BaseClass):
         return origin_set
 
     # noinspection PyUnusedLocal
-    def authorize(self, *args, **kwargs):
+    def authorize(self) -> Optional[_Response]:
         if request.endpoint.parameters['csrf']:
             if not request.csrf_token:
                 raise Forbidden()
@@ -222,12 +220,11 @@ class Controller(BaseClass):
         origins_set = self.origins
         if origins_set and request.get_client_ip() not in origins_set:
             raise Forbidden()
+        return None
 
-    def __call__(self, values: Dict[str, Any]):
+    def __call__(self) -> _Response:
         try:
-            response = self.authorize(**values)
-            if not response:
-                response = self.middleware(**values)
+            response = self.authorize() or self.middleware()
         except Exception as error:
             return self.with_exception(error)
         if not response:
@@ -236,7 +233,7 @@ class Controller(BaseClass):
             response = request.send_response(content=response)
         return response
 
-    def map_rules(self, modules: List[str]) -> List[Rule]:
+    def map_rules(self, modules: List[str]) -> Generator[Rule, None, None]:
         if arguments['pipeline']:
             endpoint_type = arguments['pipeline_mode']
         else:
@@ -246,11 +243,16 @@ class Controller(BaseClass):
             endpoint_modules: Set[str] = endpoint.modules
             endpoint_types: List[str] = endpoint.parameters['mode']
             if endpoint_modules.issubset(modules) and endpoint_type in endpoint_types:
-                urls.append(Rule(url, endpoint=endpoint, methods=endpoint.parameters['methods']))
-        return urls
+                # noinspection PyTypeChecker
+                yield Rule(
+                    string=url,
+                    endpoint=endpoint,
+                    websocket=False,
+                    merge_slashes=True,
+                    methods=endpoint.parameters['methods'])
 
     def map_urls(self, converters: Optional[Dict[str, Type[BaseConverter]]] = None) -> Map:
         converters = converters or {}
         from master.core.server import classes, modules
         converters.setdefault('datetime', classes.DateTimeConverter)
-        return Map(rules=self.map_rules(modules), converters=converters, merge_slashes=True)
+        return Map(rules=self.map_rules(modules), converters=converters)

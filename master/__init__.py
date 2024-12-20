@@ -1,6 +1,6 @@
 import time
 import logging
-from typing import Optional
+from typing import Optional, Callable
 
 from . import pip
 
@@ -8,7 +8,19 @@ pip.install_requirements('./requirements.txt', True)
 
 from werkzeug.local import LocalProxy
 
-request = LocalProxy(lambda: getattr(core.endpoints.local, 'request', None))
+
+def _extract_request_from_proxy() -> 'core.endpoints.Request':
+    try:
+        current_request = getattr(core.endpoints.local, 'request', None)
+        if not current_request:
+            raise AttributeError()
+        return current_request
+    except AttributeError:
+        raise RuntimeError('Request is not available in the current context.')
+
+
+# noinspection PyTypeChecker
+request: 'core.endpoints.Request' = LocalProxy(_extract_request_from_proxy)
 
 from . import exceptions
 from . import addons

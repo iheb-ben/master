@@ -3,6 +3,7 @@ import time
 from typing import Optional, List, Any, Union
 from werkzeug.exceptions import NotFound, TooManyRequests, ServiceUnavailable
 from werkzeug.serving import make_server, WSGIRequestHandler
+from werkzeug.wrappers import Response as _Response
 
 from master import request
 from master.api import ThreadSafeVariable, lazy_classproperty, check_lock
@@ -100,7 +101,7 @@ class Server:
         self._server.timeout = 1
         run_event.set()
 
-    def dispatch_request(self):
+    def dispatch_request(self) -> _Response:
         if self.requests_count.check(self.max_threads_number):
             return controller.with_exception(TooManyRequests())
         attempt = 60
@@ -117,7 +118,8 @@ class Server:
                 values = {}
             if request.endpoint:
                 values.update(request.read_parameters())
-                return controller(values)
+                request.values_dict = values
+                return controller()
             else:
                 return controller.with_exception(NotFound())
 
