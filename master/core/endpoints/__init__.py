@@ -156,20 +156,19 @@ local = Local()
 
 # noinspection PyMethodMayBeStatic
 class Controller(BaseClass):
-    def _page_404(self, error: Exception) -> _Response:
-        return request.send_response(status=404,
-                                     content=translate(str(error)),
-                                     mimetype='text/html')
-
-    def raise_exception(self, status: int, error: Exception) -> _Response:
-        method_name = f'_page_{status}'
-        if request.accept_mimetypes.accept_html and hasattr(self, method_name):
+    def raise_exception(self, error: HTTPException) -> _Response:
+        method_name = None
+        if request.accept_mimetypes.accept_html:
+            method_name = f'_page_{error.code}'
+        elif request.accept_mimetypes.accept_json:
+            method_name = f'_json_{error.code}'
+        if method_name and hasattr(self, method_name):
             return getattr(self, method_name)(error)
-        return request.send_response(status=status, content=translate(str(error)))
+        return request.send_response(status=error.code, content=translate(str(error.description)))
 
     def with_exception(self, error: Exception) -> _Response:
-        if isinstance(error, HTTPException) and hasattr(error, 'code'):
-            return self.raise_exception(error.code, error)
+        if isinstance(error, HTTPException):
+            return self.raise_exception(error)
         raise error
 
     def middleware(self) -> Optional[_Response]:

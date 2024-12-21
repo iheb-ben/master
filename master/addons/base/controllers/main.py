@@ -1,10 +1,11 @@
 from pathlib import Path
-from werkzeug.exceptions import NotFound, BadRequest
+from werkzeug.exceptions import NotFound, BadRequest, HTTPException
 from werkzeug.utils import secure_filename
 
 from master import request
 from master.api import route
-from master.core.endpoints import Controller
+from master.core.db import translate
+from master.core.endpoints import Controller, Response
 from master.core.modules import configurations, base_addon
 from master.core.parser import PipelineMode
 from master.tools.system import generate_file_stream
@@ -12,6 +13,11 @@ from master.tools.system import generate_file_stream
 
 # noinspection PyMethodMayBeStatic
 class Main(Controller):
+    def _page_404(self, error: HTTPException) -> Response:
+        return request.send_response(status=404,
+                                     content=translate(error.description),
+                                     mimetype='text/html')
+
     def _return_resource(self, file_path: str):
         path = Path(file_path)
         if path.is_file():
