@@ -1,5 +1,5 @@
 from functools import wraps
-from typing import Callable, Any, Type, Dict, Optional, Union, List, Iterable
+from typing import Callable, Any, Type, Dict, Optional, Union, List, Iterable, Mapping
 import threading
 
 from master.tools.collection import is_complex_iterable, ImmutableDict
@@ -37,25 +37,23 @@ class ThreadSafeVariable:
 # noinspection PyPep8Naming
 class lazy_property:
     """A decorator for lazy, cached properties."""
-    __slots__ = ('__func__', '_name')
+    __slots__ = '__func__'
 
     def __init__(self, func: Callable):
         self.__func__ = func
-        self._name = func.__name__
 
     def __get__(self, instance: Optional[object], owner: Type[object]) -> Any:
         if instance is None:
             return self
-        if self._name not in instance.__dict__:
-            instance.__dict__[self._name] = self.__func__(instance)
-        return instance.__dict__[self._name]
+        if self.__func__.__name__ not in instance.__dict__:
+            instance.__dict__[self.__func__.__name__] = self.__func__(instance)
+        return instance.__dict__[self.__func__.__name__]
 
     def __set__(self, instance: object, value: Any) -> None:
-        instance.__dict__[self._name] = value
+        instance.__dict__[self.__func__.__name__] = value
 
     def __delete__(self, instance: object) -> None:
-        if self._name in instance.__dict__:
-            del instance.__dict__[self._name]
+        instance.__dict__.pop(self.__func__.__name__, None)
 
 
 # noinspection PyPep8Naming
@@ -93,7 +91,14 @@ class lazy_classproperty(classproperty):
         self._register[self.__read_name(instance.__class__)] = value
 
 
-def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] = None, auth: Optional[str] = None, mode: Optional[Union[str, List[str]]] = None, origins: Optional[str] = None, content: Optional[str] = None, csrf: bool = False):
+def route(urls: Union[str, List[str]],
+          methods: Optional[Union[str, List[str]]] = None,
+          auth: Optional[str] = None,
+          mode: Optional[Union[str, List[str]]] = None,
+          origins: Optional[str] = None,
+          content: Optional[str] = None,
+          csrf: bool = False,
+          options: Optional[Dict[str, Any]] = None):
     from master.core.parser import PipelineMode
     from master.core.endpoints import Endpoint
     if not auth:
@@ -113,19 +118,25 @@ def route(urls: Union[str, List[str]], methods: Optional[Union[str, List[str]]] 
         mode = [mode.strip().lower()]
     else:
         mode = [value.strip().lower() for value in mode]
+    if not urls:
+        urls = []
+    elif not is_complex_iterable(urls):
+        urls = [urls]
     assert isinstance(mode, Iterable) and all(PipelineMode.from_value(value) for value in mode)
     assert not origins or isinstance(origins, str)
     assert not content or isinstance(content, str)
+    assert len(urls) > 0
 
     def _(func: Callable):
-        Endpoint.register(urls, func, ImmutableDict({
+        assert len(func.__qualname__.split('.')) > 1
+        Endpoint.register(urls=urls, func=func, parameters=ImmutableDict({
             'auth': auth,
             'methods': methods,
             'mode': mode,
             'origins': origins,
             'content': content,
             'csrf': csrf,
-        }))
+        }), options=options or {})
         return func
     return _
 

@@ -17,7 +17,6 @@ from master.core.db import translate
 from master.core.git import token
 from master.core.parser import PipelineMode
 from master.core.registry import BaseClass
-from master.tools.collection import is_complex_iterable
 
 from . import converters as system_converters
 
@@ -111,11 +110,12 @@ class Response(BaseClass, _Response):
 
 
 class Endpoint:
-    __slots__ = ('name', 'modules', 'parameters')
+    __slots__ = ('name', 'modules', 'parameters', 'options')
 
-    def __init__(self, func: Callable, parameters: Mapping[str, Any]):
-        self.parameters: Mapping[str, Any] = parameters
-        self.name: Union[str, Callable] = func.__name__ if len(func.__qualname__.split('.')) > 1 else func
+    def __init__(self, func: Callable, parameters: Dict[str, Any], options: Dict[str, Any]):
+        self.options: Dict[str, Any] = options
+        self.parameters: Dict[str, Any] = parameters
+        self.name: str = func.__name__
         self.modules: Set[str] = set()
         module = self.module_name(func)
         if module:
@@ -137,16 +137,13 @@ class Endpoint:
                 del methods[url]
 
     @classmethod
-    def register(cls, urls: Union[str, List[str]], func: Callable, parameters: Mapping[str, Any]):
-        if not is_complex_iterable(urls):
-            urls = [urls]
+    def register(cls, urls: List[str], func: Callable, *args, **kwargs):
+        kwargs['func'] = func
         for url in urls:
             if not url.startswith('/'):
                 url = '/' + url
-            if url.endswith('/'):
-                url = url[:-1]
             if url not in methods or methods[url].name != func.__name__:
-                methods[url] = cls(func, parameters)
+                methods[url] = cls(*args, **kwargs)
             else:
                 module = cls.module_name(func)
                 if module:
@@ -243,13 +240,13 @@ class Controller(BaseClass):
             endpoint_modules: Set[str] = endpoint.modules
             endpoint_types: List[str] = endpoint.parameters['mode']
             if endpoint_modules.issubset(modules) and endpoint_type in endpoint_types:
-                # noinspection PyTypeChecker
-                yield Rule(
-                    string=url,
-                    endpoint=endpoint,
-                    websocket=False,
-                    merge_slashes=True,
-                    methods=endpoint.parameters['methods'])
+                options: Dict[str, Any] = endpoint.options.copy()
+                options['string'] = url
+                options['endpoint'] = endpoint
+                options['methods'] = endpoint.parameters['methods']
+                options.setdefault('merge_slashes', True)
+                options.setdefault('websocket', False)
+                yield Rule(**options)
 
     def map_urls(self, converters: Optional[Dict[str, Type[BaseConverter]]] = None) -> Map:
         converters = converters or {}
