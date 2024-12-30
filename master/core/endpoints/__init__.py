@@ -1,10 +1,11 @@
 import json
+import traceback
 from inspect import Parameter, signature as inspect_signature
 from io import BytesIO
 from pathlib import Path
 from typing import Union, List, Dict, Any, Callable, Optional, Generator, Set, Mapping, Type
 from werkzeug.datastructures import MultiDict
-from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, Forbidden
+from werkzeug.exceptions import UnsupportedMediaType, HTTPException, Unauthorized, Forbidden, BadRequest
 from werkzeug.formparser import parse_form_data
 from werkzeug.local import Local
 from werkzeug.routing import Rule, Map, BaseConverter
@@ -99,6 +100,15 @@ class Request(BaseClass, _Request):
                 mimetype = 'text/html'
             elif self.accept_mimetypes.accept_json:
                 mimetype = 'application/json'
+        if isinstance(content, Exception):
+            if mimetype == 'application/json':
+                description = content.description if isinstance(content, HTTPException) else str(content)
+                content = json.dumps({
+                    'traceback': getattr(content, 'traceback'),
+                    'message': translate(description),
+                })
+            else:
+                content = content.description if isinstance(content, HTTPException) else str(content)
         return classes.Response(status=status, response=content, headers=headers, mimetype=mimetype)
 
 
@@ -164,7 +174,7 @@ class Controller(BaseClass):
             method_name = f'_json_{error.code}'
         if method_name and hasattr(self, method_name):
             return getattr(self, method_name)(error)
-        return request.send_response(status=error.code, content=translate(str(error.description)))
+        return request.send_response(status=error.code, content=error)
 
     def with_exception(self, error: Exception) -> _Response:
         if isinstance(error, HTTPException):
@@ -205,6 +215,12 @@ class Controller(BaseClass):
 
     # noinspection PyUnusedLocal
     def authorize(self) -> Optional[_Response]:
+        content: str = request.endpoint.parameters['content'] or ''
+        content_set = set(filter(lambda o: o, map(lambda o: o.strip(), content.split(','))))
+        request_content: str = request.headers.get('Content-Type') or ''
+        request_content_set = set(filter(lambda o: o, map(lambda o: o.strip(), request_content.split(','))))
+        if content and request_content and not content_set.issubset(request_content_set):
+            raise BadRequest()
         if request.endpoint.parameters['csrf']:
             if not request.csrf_token:
                 raise Forbidden()
@@ -222,6 +238,7 @@ class Controller(BaseClass):
         try:
             response = self.authorize() or self.middleware()
         except Exception as error:
+            error.traceback = traceback.format_exc()
             return self.with_exception(error)
         if not response:
             response = request.send_response()

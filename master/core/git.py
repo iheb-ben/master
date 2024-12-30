@@ -13,7 +13,7 @@ for logger_name in ['urllib3.connectionpool', 'git', 'git.cmd', 'git.repo.base']
     logger.setLevel(logging.CRITICAL)
 
 import requests
-from git import Repo, GitCommandError
+from git import Repo, GitCommandError, InvalidGitRepositoryError
 
 from master.api import check_lock
 from master.core import arguments, signature
@@ -72,16 +72,19 @@ class GitRepoManager:
     @check_lock
     def clone(self, url: str, path: str) -> None:
         """Clone a repository to a specified path."""
+        repo: Optional[Repo] = None
+        repo_path = Path(path) / '.git'
         try:
-            repo: Optional[Repo] = None
-            repo_path = Path(path) / '.git'
-            if repo_path.exists():
+            if repo_path.is_dir():
                 if not is_folder_empty(repo_path, False):
-                    repo = Repo(path)
+                    repo = Repo(repo_path.parent)
                 else:
-                    rmtree(path)
+                    rmtree(repo_path.parent)
+        except InvalidGitRepositoryError:
+            rmtree(repo_path.parent)
+        try:
             if not repo:
-                repo = Repo.clone_from(url, path)
+                repo = Repo.clone_from(url, repo_path.parent)
                 _logger.debug(f"Cloned repo from {url} to [{path}]")
             self.repos[path] = repo
             self._repo_locks[path] = threading.RLock()

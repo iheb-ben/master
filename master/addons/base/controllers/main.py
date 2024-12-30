@@ -15,7 +15,7 @@ from master.tools.system import generate_file_stream
 class Main(Controller):
     def _page_404(self, error: HTTPException) -> Response:
         return request.send_response(status=404,
-                                     content=translate(error.description),
+                                     content=error,
                                      mimetype='text/html')
 
     def _return_resource(self, file_path: str):
