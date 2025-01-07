@@ -3,7 +3,6 @@ Flask-RESTx
 Flask-SocketIO
 Flask-Migrate
 Flask-SQLAlchemy
-flask-jwt-extended
 SQLAlchemy
 psycopg2-binary
 Werkzeug
