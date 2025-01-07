@@ -1,0 +1,17 @@
+Flask
+Flask-RESTx
+Flask-SocketIO
+Flask-Migrate
+Flask-SQLAlchemy
+flask-jwt-extended
+SQLAlchemy
+psycopg2-binary
+Werkzeug
+eventlet
+python-dotenv
+PyJWT
+gunicorn
+kafka-python
+pytest
+pytest-flask
+requests
