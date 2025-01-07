@@ -6,13 +6,13 @@ from app import config
 
 def client_public_ip():
     """Extract the client's IP address, considering proxy/forwarding."""
-    if "X-Forwarded-For" in request.headers:
-        # Use the first IP in the X-Forwarded-For list
-        return request.headers["X-Forwarded-For"].split(",")[0].strip()
-    if "X-Real-IP" in request.headers:
-        return request.headers["X-Real-IP"]
-    # Fallback to remote address
-    return request.remote_addr
+    client_ip = request.headers.get('X-Real-IP') or request.remote_addr
+    forwarded_header = request.headers.get('X-Forwarded-For') or ''
+    if 'X-Real-IP' not in request.headers:
+        for ip_address in forwarded_header.split(','):
+            if not ip_address.isspace():
+                return ip_address
+    return client_ip
 
 
 def token_expiration_date() -> Tuple[datetime.datetime, datetime.datetime]:

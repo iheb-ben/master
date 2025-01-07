@@ -33,12 +33,12 @@ header_parser.add_argument(
     required=False,
     help='Contains the real IP address of the client as determined by the proxy or load balancer'
 )
-login_request = auth_ns.model(name='LoginRequest', model={
+login_request = auth_ns.model(name='Login Request', model={
     'username': fields.String(required=True, description='Username/Email of the user'),
     'password': fields.String(required=True, description='Password of the user'),
     'remember_me': fields.Boolean(description='Remember user'),
 }, strict=True)
-login_response = auth_ns.model(name='LoginResponse', model={
+login_response = auth_ns.model(name='Login Response', model={
     'message': fields.String(description='Login status message'),
     'token': fields.String(description='JWT token for authentication'),
     'expires_at': fields.String(description='Token expiration date in ISO 8601 format')
