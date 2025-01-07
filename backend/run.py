@@ -3,7 +3,7 @@ import functools
 from typing import Optional
 from flask import request
 from app import create_app, db, socketio
-from app.config import Config
+from app import config
 from app.logger import setup_logger
 from app.models.session import Session
 from app.models.user import User
@@ -57,4 +57,4 @@ if __name__ == '__main__':
         ensure_admin_user()
         if check_db_session():
             db.session.commit()
-    socketio.run(app=app, host='127.0.0.1', port=Config.PORT, debug=Config.DEBUG, log_output=logger)
+    socketio.run(app=app, host=config.HOST, debug=config.DEBUG, log_output=logger)

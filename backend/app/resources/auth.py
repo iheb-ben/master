@@ -8,7 +8,7 @@ import jwt
 from app import db
 from app.models.user import User, Partner
 from app.models.session import Session
-from app.config import Config
+from app import config
 from app.resources import ResponseMessages
 from app.tools import client_public_ip, token_expiration_date
 from app.utils import rollback_commit, login_required
@@ -75,7 +75,7 @@ class Login(Resource):
             'user_id': user.id,
             'ip': ip_address,
             'exp': expires_at,
-        }, Config.JWT_SECRET_KEY, algorithm='HS256')
+        }, config.JWT_SECRET_KEY, algorithm='HS256')
         user_agent = request.headers.get('User-Agent') or 'Undefined'
         # Manage session
         user_session: Optional[Session] = Session.query.filter_by(user_id=user.id, ip_address=ip_address).first()

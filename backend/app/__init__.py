@@ -9,6 +9,7 @@ from . import logger
 
 migrate = Migrate()
 db = SQLAlchemy()
+app = Flask(__name__)
 socketio = SocketIO()
 api = Api(
     version='1.0',
@@ -27,8 +28,7 @@ api = Api(
 
 
 def create_app():
-    app = Flask(__name__)
-    app.config.from_object(config.Config)
+    app.config.from_object(config)
     db.init_app(app)
     socketio.init_app(app)
     api.init_app(app)
