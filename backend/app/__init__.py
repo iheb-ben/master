@@ -31,6 +31,8 @@ api = Api(
 
 
 def create_app():
+    # Register all namespaces
+    from app import resources
     configuration = SimpleNamespace()
     for name, value in vars(config).items():
         if name.isupper() and not name.startswith('_') and not name.endswith('_'):
@@ -40,8 +42,6 @@ def create_app():
     socketio.init_app(app)
     api.init_app(app)
     migrate.init_app(app)
-    # Register all namespaces
-    from app import resources
     for namespace in api_register:
         api.add_namespace(namespace)
     socketio.on_namespace(resources.ws.WebSocket(namespace='/ws'))
