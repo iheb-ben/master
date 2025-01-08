@@ -12,7 +12,7 @@ from . import logger
 
 migrate = Migrate()
 app = Flask(__name__)
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+cors = CORS()
 socketio = SocketIO()
 api = Api(
     version='1.0',
@@ -37,10 +37,11 @@ def create_app():
         if name.isupper() and not name.startswith('_') and not name.endswith('_'):
             setattr(configuration, name, value)
     app.config.from_object(configuration)
-    connector.db.init_app(app)
-    socketio.init_app(app)
+    cors.init_app(app, resources={r"/*": {"origins": "http://localhost:3000"}})
     api.init_app(app)
-    migrate.init_app(app)
+    connector.db.init_app(app)
+    migrate.init_app(app, connector.db)
+    socketio.init_app(app)
     # Register all namespaces
     from app import resources
     return app

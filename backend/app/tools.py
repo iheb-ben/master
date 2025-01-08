@@ -38,3 +38,11 @@ def client_public_ip():
 def token_expiration_date() -> Tuple[datetime.datetime, datetime.datetime]:
     current_date = datetime.datetime.utcnow()
     return current_date, current_date + datetime.timedelta(hours=config.JWT_ACCESS_TOKEN_EXPIRES)
+
+
+def current_user_id():
+    try:
+        return request.user.id
+    except RuntimeError:
+        from app.utils.setup import SUPER_USER_ID
+        return SUPER_USER_ID

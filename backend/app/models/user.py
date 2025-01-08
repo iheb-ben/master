@@ -28,7 +28,6 @@ class User(db.Model):
     active = db.Column(db.Boolean, default=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(6), nullable=False, default='user')
     sessions = db.relationship(
         'Session',
         back_populates='user',

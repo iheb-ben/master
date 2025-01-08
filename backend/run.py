@@ -9,7 +9,7 @@ from app.logger import setup_logger
 from app.models.session import Session
 from app.models.user import User
 from app.tools import client_public_ip
-from app.utils.admin_setup import ensure_admin_user, PUBLIC_USER_ID
+from app.utils.setup import initialize_database, PUBLIC_USER_ID
 
 app = create_app()
 logger = setup_logger()
@@ -50,9 +50,8 @@ def select_user() -> Optional[User]:
 
 if __name__ == '__main__':
     with app.app_context():
-        # db.drop_all()
         db.create_all()
-        ensure_admin_user()
+        initialize_database()
         if check_db_session():
             db.session.commit()
     socketio.run(app=app, host=config.HOST, debug=config.DEBUG, log_output=logger)

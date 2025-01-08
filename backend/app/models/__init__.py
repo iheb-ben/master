@@ -1,13 +1,7 @@
 from flask import request
 from datetime import datetime
 from app.connector import db
-
-
-def current_user_id():
-    try:
-        return request.user.id
-    except RuntimeError:
-        return 1
+from app.tools import current_user_id
 
 
 class BaseModel(db.Model):

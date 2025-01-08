@@ -9,7 +9,7 @@ user_ns: Namespace = api.namespace(name='Users', path='/users', description='Use
 user_model = user_ns.model(name='User', model={
     'username': fields.String(required=True, description='Username of the user'),
     'password': fields.String(required=True, description='Password for the user'),
-    'role': fields.String(default='user', description='Role of the user')
+    'access_rights': fields.List(str, required=True, description='Roles of the user'),
 })
 
 
