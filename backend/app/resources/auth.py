@@ -5,7 +5,6 @@ from dateutil import relativedelta
 from dateutil.relativedelta import relativedelta
 from flask_restx import Namespace, Resource, fields, reqparse
 from flask import request, abort
-from werkzeug.security import check_password_hash
 import jwt
 from app.connector import db, rollback_commit
 from app.models.user import User, Partner
