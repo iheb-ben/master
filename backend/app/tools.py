@@ -1,7 +1,27 @@
 import datetime
+import hmac
+import hashlib
+import base64
 from typing import Tuple
 from flask import request
 from app import config
+
+
+def generate_secret_string(input_string: str) -> str:
+    """
+    Generates a secure secret string using HMAC and a secret key.
+    Args:
+        input_string (str): The input string to be secured.
+    Returns:
+        str: A base64-encoded secret string.
+    """
+    # Encode the input string and secret key to bytes
+    input_bytes = input_string.encode('utf-8')
+    secret_bytes = config.JWT_SECRET_KEY.encode('utf-8')
+    # Create HMAC object using SHA256
+    hmac_obj = hmac.new(secret_bytes, input_bytes, hashlib.sha256)
+    # Generate the digest and encode it in base64 for readability
+    return base64.urlsafe_b64encode(hmac_obj.digest()).decode('utf-8')
 
 
 def client_public_ip():

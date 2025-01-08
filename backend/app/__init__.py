@@ -1,8 +1,8 @@
 import inspect
 from types import SimpleNamespace
 from flask import Flask
-from flask_socketio import SocketIO
 from flask_restx import Api
+from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_cors import CORS
 from . import config

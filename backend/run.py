@@ -18,7 +18,7 @@ logger = setup_logger()
 def _before_request(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> None:
-        if not hasattr(request, 'user') and request.path.startswith(api.prefix):
+        if not hasattr(request, 'user') and request.path.startswith(api.prefix or '/'):
             user: Optional[User] = func(*args, **kwargs)
             if not user:
                 user = User.query.filter_by(id=PUBLIC_USER_ID).first()
@@ -31,7 +31,7 @@ def _before_request(func):
 @_before_request
 def select_user() -> Optional[User]:
     current_datetime = datetime.datetime.utcnow()
-    token = request.authorization and request.authorization.token or ''
+    token: str = request.authorization and request.authorization.token or ''
     ip_address = client_public_ip()
     if ip_address and token.startswith('Bearer '):
         session: Optional[Session] = Session.query.filter_by(token=token.split(' ')[-1], ip_address=ip_address).first()

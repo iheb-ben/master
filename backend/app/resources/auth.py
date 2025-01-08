@@ -12,7 +12,7 @@ from app.models.user import User, Partner
 from app.models.session import Session
 from app import config, api
 from app.resources import ResponseMessages
-from app.tools import client_public_ip, token_expiration_date
+from app.tools import client_public_ip, token_expiration_date, generate_secret_string
 from app.utils import login_required
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
@@ -56,14 +56,14 @@ class LoginResource(Resource):
     @rollback_commit
     def post(self):
         """Authenticate user and generate a token"""
-        username = auth_ns.payload['username'].strip()
-        password = auth_ns.payload['password'].strip()
+        username = str(auth_ns.payload['username']).strip()
+        password = str(auth_ns.payload['password']).strip()
         # Fetch the user
         user: Optional[User] = User.query.filter_by(username=username, active=True).first()
         if not user:
             partner = Partner.query.filter_by(email=username).first()
             user = partner and partner.user or None
-        if not user or not check_password_hash(user.password, password):
+        if not user or user.password != generate_secret_string(password):
             abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
         logged_in_at, expires_at = token_expiration_date()
         if user.suspend_until and user.suspend_until >= logged_in_at:
