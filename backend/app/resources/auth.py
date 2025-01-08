@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 from dateutil import relativedelta
 from dateutil.relativedelta import relativedelta
@@ -5,15 +6,16 @@ from flask_restx import Namespace, Resource, fields, reqparse
 from flask import request, abort
 from werkzeug.security import check_password_hash
 import jwt
-from app import db
+from app.connector import db, rollback_commit
 from app.models.user import User, Partner
 from app.models.session import Session
-from app import config
+from app import config, api_register
 from app.resources import ResponseMessages
 from app.tools import client_public_ip, token_expiration_date
-from app.utils import rollback_commit, login_required
+from app.utils import login_required
 
-auth_ns = Namespace('Authentication', description='Authentication operations')
+auth_ns = Namespace(name='Authentication', path='/auth', description='Authentication operations')
+api_register.add(auth_ns)
 header_parser = reqparse.RequestParser()
 header_parser.add_argument(
     'User-Agent',
@@ -43,6 +45,7 @@ login_response = auth_ns.model(name='Login Response', model={
     'token': fields.String(description='JWT token for authentication'),
     'expires_at': fields.String(description='Token expiration date in ISO 8601 format')
 })
+_logger = logging.getLogger(__name__)
 
 
 @auth_ns.route('/login')

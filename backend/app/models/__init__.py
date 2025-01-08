@@ -1,6 +1,6 @@
 from flask import request
-from app import db
 from datetime import datetime
+from app.connector import db
 
 
 class BaseModel(db.Model):

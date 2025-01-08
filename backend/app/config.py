@@ -12,7 +12,7 @@ SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI', 'postgresql://pos
 SQLALCHEMY_TRACK_MODIFICATIONS = os.getenv('SQLALCHEMY_TRACK_MODIFICATIONS', 'True').strip().upper() in ('1', 'TRUE')
 LOG_LEVEL = os.getenv('LOG_LEVEL', 'INFO').upper()
 LOG_FORMAT = os.getenv('LOG_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# Update port values
+# Update configuration values
 PORT = int(SERVER_NAME.rsplit(':')[1])
 HOST = SERVER_NAME.rsplit(':')[0]
 os.environ['SERVER_NAME'] = SERVER_NAME

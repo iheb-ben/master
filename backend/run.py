@@ -2,13 +2,13 @@ import datetime
 import functools
 from typing import Optional
 from flask import request
-from app import create_app, db, socketio
+from app import create_app, socketio
 from app import config
+from app.connector import db, check_db_session
 from app.logger import setup_logger
 from app.models.session import Session
 from app.models.user import User
 from app.tools import client_public_ip
-from app.utils import check_db_session
 from app.utils.admin_setup import ensure_admin_user, PUBLIC_USER_ID
 
 app = create_app()

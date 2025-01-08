@@ -1,4 +1,4 @@
-from app import db
+from app.connector import db
 from app.models import BaseModel
 
 user_access_right = db.Table(

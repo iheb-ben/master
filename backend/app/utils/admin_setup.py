@@ -1,5 +1,5 @@
 from typing import Optional
-from app import db
+from app.connector import db
 from app.models.user import User, AccessRightCategory
 from werkzeug.security import generate_password_hash
 
