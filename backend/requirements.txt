@@ -3,6 +3,7 @@ Flask-RESTx
 Flask-SocketIO
 Flask-Migrate
 Flask-SQLAlchemy
+flask-cors
 SQLAlchemy
 psycopg2-binary
 Werkzeug

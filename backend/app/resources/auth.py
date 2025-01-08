@@ -49,7 +49,7 @@ _logger = logging.getLogger(__name__)
 
 
 @auth_ns.route('/login')
-class Login(Resource):
+class LoginResource(Resource):
     @auth_ns.expect(login_request, header_parser)
     @auth_ns.response(code=200, description='Login successful', model=login_response)
     @auth_ns.response(code=401, description=ResponseMessages.LOGIN_ERROR.value)
@@ -113,7 +113,7 @@ class Login(Resource):
 
 
 @auth_ns.route('/logout')
-class Logout(Resource):
+class LogoutResource(Resource):
     @auth_ns.response(200, 'Logout successful')
     @login_required(auth_ns)
     @rollback_commit

@@ -10,7 +10,7 @@ def client_public_ip():
     forwarded_header = request.headers.get('X-Forwarded-For') or ''
     if 'X-Real-IP' not in request.headers:
         for ip_address in forwarded_header.split(','):
-            if not ip_address.isspace():
+            if ip_address and not ip_address.isspace():
                 return ip_address
     return client_ip
 

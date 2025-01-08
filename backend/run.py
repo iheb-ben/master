@@ -3,7 +3,7 @@ import functools
 from typing import Optional
 from flask import request
 from app import create_app, socketio
-from app import config
+from app import config, api
 from app.connector import db, check_db_session
 from app.logger import setup_logger
 from app.models.session import Session
@@ -18,7 +18,7 @@ logger = setup_logger()
 def _before_request(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs) -> None:
-        if not hasattr(request, 'user'):
+        if not hasattr(request, 'user') and request.path.startswith(api.prefix):
             user: Optional[User] = func(*args, **kwargs)
             if not user:
                 user = User.query.filter_by(id=PUBLIC_USER_ID).first()
@@ -33,9 +33,7 @@ def select_user() -> Optional[User]:
     current_datetime = datetime.datetime.utcnow()
     token = request.authorization and request.authorization.token or ''
     ip_address = client_public_ip()
-    if ip_address:
-        if not token.startswith('Bearer '):
-            return logger.debug(f'No attached token was found for IP {ip_address}')
+    if ip_address and token.startswith('Bearer '):
         session: Optional[Session] = Session.query.filter_by(token=token.split(' ')[-1], ip_address=ip_address).first()
         if not session:
             return logger.debug(f'No session was found for IP {ip_address}')
@@ -48,14 +46,6 @@ def select_user() -> Optional[User]:
         if session.user.suspend_until and session.user.suspend_until > current_datetime:
             return logger.debug(f'User {session.user.id} is suspended')
         return session.user
-
-
-@app.after_request
-def remove_cors_headers(response):
-    response.headers.pop('Access-Control-Allow-Origin', None)
-    response.headers.pop('Access-Control-Allow-Methods', None)
-    response.headers.pop('Access-Control-Allow-Headers', None)
-    return response
 
 
 if __name__ == '__main__':

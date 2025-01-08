@@ -4,6 +4,7 @@ from flask import Flask
 from flask_socketio import SocketIO
 from flask_restx import Api
 from flask_migrate import Migrate
+from flask_cors import CORS
 from . import config
 from . import connector
 from . import tools
@@ -11,6 +12,7 @@ from . import logger
 
 migrate = Migrate()
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 socketio = SocketIO()
 api = Api(
     version='1.0',
