@@ -1,3 +1,4 @@
+import datetime
 import logging
 from typing import Optional
 from dateutil import relativedelta
@@ -9,13 +10,12 @@ import jwt
 from app.connector import db, rollback_commit
 from app.models.user import User, Partner
 from app.models.session import Session
-from app import config, api_register
+from app import config, api
 from app.resources import ResponseMessages
 from app.tools import client_public_ip, token_expiration_date
 from app.utils import login_required
 
-auth_ns = Namespace(name='Authentication', path='/auth', description='Authentication operations')
-api_register.add(auth_ns)
+auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()
 header_parser.add_argument(
     'User-Agent',
@@ -24,23 +24,23 @@ header_parser.add_argument(
     help='Identifies the client software (browser, app, etc.) making the request'
 )
 header_parser.add_argument(
-    'X-Forwarded-For',
-    location='headers',
-    required=False,
-    help='Contains the originating IP address of the client connecting through a proxy or load balancer'
-)
-header_parser.add_argument(
     'X-Real-IP',
     location='headers',
     required=False,
     help='Contains the real IP address of the client as determined by the proxy or load balancer'
 )
-login_request = auth_ns.model(name='Login Request', model={
+header_parser.add_argument(
+    'X-Forwarded-For',
+    location='headers',
+    required=False,
+    help='Contains the originating IP address of the client connecting through a proxy or load balancer'
+)
+login_request = auth_ns.model(name='LoginRequest', model={
     'username': fields.String(required=True, description='Username/Email of the user'),
     'password': fields.String(required=True, description='Password of the user'),
     'remember_me': fields.Boolean(description='Remember user'),
 }, strict=True)
-login_response = auth_ns.model(name='Login Response', model={
+login_response = auth_ns.model(name='LoginResponse', model={
     'message': fields.String(description='Login status message'),
     'token': fields.String(description='JWT token for authentication'),
     'expires_at': fields.String(description='Token expiration date in ISO 8601 format')
@@ -121,8 +121,7 @@ class Logout(Resource):
         """Logout user and invalidate session"""
         ip_address = client_public_ip()
         Session.query.filter_by(user_id=user.id, ip_address=ip_address, active=True).update({
-            'logged_in_at': None,
-            'expires_at': None,
+            'logged_out_at': datetime.datetime.utcnow(),
             'token': None,
         })
         return {'message': 'Logout successful'}, 200

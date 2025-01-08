@@ -50,6 +50,14 @@ def select_user() -> Optional[User]:
         return session.user
 
 
+@app.after_request
+def remove_cors_headers(response):
+    response.headers.pop('Access-Control-Allow-Origin', None)
+    response.headers.pop('Access-Control-Allow-Methods', None)
+    response.headers.pop('Access-Control-Allow-Headers', None)
+    return response
+
+
 if __name__ == '__main__':
     with app.app_context():
         # db.drop_all()

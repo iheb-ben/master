@@ -2,11 +2,10 @@ from flask_restx import Namespace, Resource, fields
 from app.connector import db
 from app.models.user import User
 from werkzeug.security import generate_password_hash
-from app import api_register
 from app.utils import login_required
+from app import api
 
-user_ns = Namespace(name='Users', path='/users', description='User management operations')
-api_register.add(user_ns)
+user_ns: Namespace = api.namespace(name='Users', path='/users', description='User management operations')
 user_model = user_ns.model(name='User', model={
     'username': fields.String(required=True, description='Username of the user'),
     'password': fields.String(required=True, description='Password for the user'),

@@ -9,7 +9,6 @@ from . import connector
 from . import tools
 from . import logger
 
-api_register = set()
 migrate = Migrate()
 app = Flask(__name__)
 socketio = SocketIO()
@@ -31,8 +30,6 @@ api = Api(
 
 
 def create_app():
-    # Register all namespaces
-    from app import resources
     configuration = SimpleNamespace()
     for name, value in vars(config).items():
         if name.isupper() and not name.startswith('_') and not name.endswith('_'):
@@ -42,7 +39,6 @@ def create_app():
     socketio.init_app(app)
     api.init_app(app)
     migrate.init_app(app)
-    for namespace in api_register:
-        api.add_namespace(namespace)
-    socketio.on_namespace(resources.ws.WebSocket(namespace='/ws'))
+    # Register all namespaces
+    from app import resources
     return app

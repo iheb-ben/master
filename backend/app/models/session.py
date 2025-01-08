@@ -11,4 +11,5 @@ class Session(BaseModel):
     user_agent = db.Column(db.String(255), nullable=True)
     token = db.Column(db.String(255), nullable=True)
     logged_in_at = db.Column(db.DateTime, nullable=True)
+    logged_out_at = db.Column(db.DateTime, nullable=True)
     expires_at = db.Column(db.DateTime, nullable=True)

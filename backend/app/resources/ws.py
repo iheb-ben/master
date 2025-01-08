@@ -1,5 +1,6 @@
 from flask_socketio import Namespace, emit
 from app.services.websocket_service import handle_message
+from app import socketio
 
 
 # noinspection PyMethodMayBeStatic
@@ -13,3 +14,6 @@ class WebSocket(Namespace):
 
     def on_custom_event(self, data):
         handle_message(data)
+
+
+socketio.on_namespace(WebSocket(namespace='/ws'))
