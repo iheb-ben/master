@@ -8,11 +8,10 @@ import jwt
 from app.connector import db, rollback_commit
 from app.models.user import User
 from app.models.session import Session
-from app import config, api, app
-from app.resources import ResponseMessages, validate_payload
+from app import config, api
+from app.resources import ResponseMessages
 from app.tools import client_public_ip, token_expiration_date, generate_secret_string
-from app.utils import login_required
-from app.utils.setup import SUPER_USER_ID
+from app.utils import login_required, validate_payload
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()
@@ -52,27 +51,26 @@ class LoginResource(Resource):
     @auth_ns.expect(login_request, header_parser)
     @auth_ns.response(code=200, description='Login successful', model=login_response)
     @auth_ns.response(code=401, description=ResponseMessages.LOGIN_ERROR.value)
-    @validate_payload(auth_ns, ['username', 'password'])
+    @validate_payload(auth_ns, login_request)
     @rollback_commit
     def post(self):
         """Authenticate user and generate a token"""
         username = str(auth_ns.payload['username']).strip()
         password = str(auth_ns.payload['password']).strip()
         # Fetch the user
-        if app.config.get('TESTING'):
-            user = User.query.filter_by(id=SUPER_USER_ID).first()
-        else:
-            user: Optional[User] = User.query.filter_by(username=username, active=True).first()
-            if not user or user.password != generate_secret_string(password):
-                abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
+        user: Optional[User] = User.query.filter_by(username=username, active=True).first()
+        if not user or user.password != generate_secret_string(password):
+            abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
+        # Extract the client's IP address
+        ip_address = client_public_ip()
+        if user.username == 'public' and ip_address != '127.0.0.1':
+            abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
         logged_in_at, expires_at = token_expiration_date()
         if user.suspend_until and user.suspend_until >= logged_in_at:
             abort(401, ResponseMessages.ACCOUNT_SUSPENDED.value)
         user.suspend_until = None
         if auth_ns.payload.get('remember_me'):
             expires_at = logged_in_at + relativedelta(years=1)
-        # Extract the client's IP address
-        ip_address = client_public_ip()
         # Generate JWT token
         token = jwt.encode({
             'user_id': user.id,
