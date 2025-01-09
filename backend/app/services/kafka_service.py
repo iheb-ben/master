@@ -1,7 +1,7 @@
 from kafka import KafkaProducer, KafkaConsumer
 import os
 
-KAFKA_BROKER = os.getenv('KAFKA_BROKER', 'localhost:9092')
+KAFKA_BROKER = os.getenv('KAFKA_BROKER', '127.0.0.1:9092')
 
 
 def produce_message(topic, message):

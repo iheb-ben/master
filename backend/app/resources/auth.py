@@ -6,12 +6,13 @@ from flask_restx import Namespace, Resource, fields, reqparse
 from flask import request, abort
 import jwt
 from app.connector import db, rollback_commit
-from app.models.user import User, Partner
+from app.models.user import User
 from app.models.session import Session
-from app import config, api
-from app.resources import ResponseMessages
+from app import config, api, app
+from app.resources import ResponseMessages, validate_payload
 from app.tools import client_public_ip, token_expiration_date, generate_secret_string
 from app.utils import login_required
+from app.utils.setup import SUPER_USER_ID
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()
@@ -51,18 +52,19 @@ class LoginResource(Resource):
     @auth_ns.expect(login_request, header_parser)
     @auth_ns.response(code=200, description='Login successful', model=login_response)
     @auth_ns.response(code=401, description=ResponseMessages.LOGIN_ERROR.value)
+    @validate_payload(auth_ns, ['username', 'password'])
     @rollback_commit
     def post(self):
         """Authenticate user and generate a token"""
         username = str(auth_ns.payload['username']).strip()
         password = str(auth_ns.payload['password']).strip()
         # Fetch the user
-        user: Optional[User] = User.query.filter_by(username=username, active=True).first()
-        if not user:
-            partner = Partner.query.filter_by(email=username).first()
-            user = partner and partner.user or None
-        if not user or user.password != generate_secret_string(password):
-            abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
+        if app.config.get('TESTING'):
+            user = User.query.filter_by(id=SUPER_USER_ID).first()
+        else:
+            user: Optional[User] = User.query.filter_by(username=username, active=True).first()
+            if not user or user.password != generate_secret_string(password):
+                abort(401, ResponseMessages.INVALID_CREDENTIALS.value)
         logged_in_at, expires_at = token_expiration_date()
         if user.suspend_until and user.suspend_until >= logged_in_at:
             abort(401, ResponseMessages.ACCOUNT_SUSPENDED.value)

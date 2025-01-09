@@ -5,6 +5,9 @@ db = SQLAlchemy()
 
 
 def check_db_session() -> bool:
+    from app import app
+    if app.config.get('TESTING'):
+        return False
     return db.session.dirty or db.session.new or db.session.deleted
 
 

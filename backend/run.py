@@ -14,7 +14,7 @@ from app.tools import client_public_ip
 from app.utils.setup import initialize_database, PUBLIC_USER_ID
 
 app = create_app()
-cors.init_app(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+cors.init_app(app, resources={r"/*": {"origins": "http://127.0.0.1:3000"}})
 logger = setup_logger()
 
 
