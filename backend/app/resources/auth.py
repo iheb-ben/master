@@ -1,7 +1,6 @@
 import datetime
 import logging
 from typing import Optional
-from dateutil import relativedelta
 from dateutil.relativedelta import relativedelta
 from flask_restx import Namespace, Resource, fields, reqparse
 from flask import request, abort
