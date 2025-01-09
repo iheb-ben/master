@@ -6,7 +6,7 @@ login_url = f'http://{SERVER_NAME}/api/auth/login'
 
 def test_auth_required_fields(client):
     """Test login with missing data."""
-    response = client.post(login_url, json={'username': 'admin'})
+    response = client.post(login_url, json={'username': '.'})
     assert response.status_code == 400
 
 
