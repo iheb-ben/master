@@ -7,7 +7,7 @@ def client():
     """Fixture to provide a test client."""
     config.TESTING = True
     config.DEBUG = False
-    app = create_app()
-    with app.test_client() as client:
-        with app.app_context():
+    server = create_app()
+    with server.test_client() as client:
+        with server.app_context():
             yield client

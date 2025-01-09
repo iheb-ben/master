@@ -13,7 +13,7 @@ from app.models.user import User
 from app.tools import client_public_ip
 from app.utils.setup import initialize_database, PUBLIC_USER_ID
 
-app = create_app()
+server = create_app()
 logger = setup_logger()
 
 
@@ -21,7 +21,7 @@ def setup_database():
     """
     Dynamically initialize, migrate, and upgrade the database.
     """
-    with app.app_context():
+    with server.app_context():
         # Initialize migrations directory if not present
         migrations_path = os.path.join(os.getcwd(), 'migrations')
         if not os.path.exists(migrations_path):
@@ -38,4 +38,4 @@ def setup_database():
 # Run the application
 if __name__ == '__main__':
     setup_database()  # Ensure database is initialized and upgraded
-    socketio.run(app=app, host=config.HOST, debug=config.DEBUG, log_output=logger)
+    socketio.run(app=server, host=config.HOST, debug=config.DEBUG, log_output=logger)

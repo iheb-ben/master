@@ -1,17 +1,18 @@
 import functools
+from typing import Callable
 from flask_sqlalchemy import SQLAlchemy
+from app import config
 
 db = SQLAlchemy()
 
 
 def check_db_session() -> bool:
-    from app import app
-    if app.config.get('TESTING'):
+    if config.TESTING:
         return False
     return db.session.dirty or db.session.new or db.session.deleted
 
 
-def rollback_commit(func):
+def rollback_commit(func: Callable):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         try:

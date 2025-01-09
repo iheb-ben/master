@@ -40,17 +40,17 @@ def create_app():
     for name, value in vars(config).items():
         if name.isupper() and not name.startswith('_') and not name.endswith('_'):
             setattr(configuration, name, value)
-    globals()['app'] = Flask(__name__)
-    app.config.from_object(configuration)
-    api.init_app(app)
-    cors.init_app(app, resources={r"/*": {"origins": "http://127.0.0.1:3000"}})
-    connector.db.init_app(app)
-    migrate.init_app(app, connector.db)
-    socketio.init_app(app)
+    server = Flask(__name__)
+    server.config.from_object(configuration)
+    api.init_app(server)
+    cors.init_app(server, resources={r"/*": {"origins": "http://127.0.0.1:3000"}})
+    connector.db.init_app(server)
+    migrate.init_app(server, connector.db)
+    socketio.init_app(server)
     # Register all namespaces
     from app import resources
-    app.before_request(_read_user)
-    return app
+    server.before_request(_read_user)
+    return server
 
 
 def _before_request(func):
