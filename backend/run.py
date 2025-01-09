@@ -5,7 +5,7 @@ from typing import Optional
 from flask import request
 from flask_migrate import init, migrate, upgrade
 from app import create_app, socketio
-from app import config, api
+from app import config, api, cors
 from app.connector import db, check_db_session
 from app.logger import setup_logger
 from app.models.session import Session
@@ -14,6 +14,7 @@ from app.tools import client_public_ip
 from app.utils.setup import initialize_database, PUBLIC_USER_ID
 
 app = create_app()
+cors.init_app(app, resources={r"/*": {"origins": "http://localhost:3000"}})
 logger = setup_logger()
 
 

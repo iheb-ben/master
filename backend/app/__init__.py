@@ -37,7 +37,6 @@ def create_app():
         if name.isupper() and not name.startswith('_') and not name.endswith('_'):
             setattr(configuration, name, value)
     app.config.from_object(configuration)
-    cors.init_app(app, resources={r"/*": {"origins": "http://localhost:3000"}})
     api.init_app(app)
     connector.db.init_app(app)
     migrate.init_app(app, connector.db)

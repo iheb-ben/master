@@ -43,6 +43,6 @@ def token_expiration_date() -> Tuple[datetime.datetime, datetime.datetime]:
 def current_user_id():
     try:
         return request.user.id
-    except RuntimeError:
+    except (RuntimeError, AttributeError):
         from app.utils.setup import SUPER_USER_ID
         return SUPER_USER_ID

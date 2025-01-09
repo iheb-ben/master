@@ -67,7 +67,7 @@ class LoginResource(Resource):
         if user.suspend_until and user.suspend_until >= logged_in_at:
             abort(401, ResponseMessages.ACCOUNT_SUSPENDED.value)
         user.suspend_until = None
-        if auth_ns.payload['remember_me']:
+        if auth_ns.payload.get('remember_me'):
             expires_at = logged_in_at + relativedelta(years=1)
         # Extract the client's IP address
         ip_address = client_public_ip()
