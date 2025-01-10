@@ -2,8 +2,8 @@ import inspect
 from datetime import datetime
 from functools import wraps
 from types import SimpleNamespace
-from typing import Optional
-from flask import Flask, request
+from typing import Optional, Callable
+from flask import Flask, request, current_app
 from flask_restx import Api
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
@@ -11,7 +11,7 @@ from flask_cors import CORS
 from . import utils
 from . import config
 from . import tools
-from . import logger
+from . import logger as logger_config
 from . import connector
 from . import models
 
@@ -53,15 +53,15 @@ def create_app():
     return server
 
 
-def _before_request(func):
+def _before_request(func: Callable):
     @wraps(func)
     def wrapper(*args, **kwargs) -> None:
-        if not hasattr(request, 'user') and request.path.startswith(api.prefix or '/'):
+        if not hasattr(request, 'user') and request.path.startswith(api.prefix):
             user: Optional[models.user.User] = func(*args, **kwargs)
             if not user:
                 user = models.user.User.query.filter_by(id=utils.setup.PUBLIC_USER_ID).first()
             request.user = user
-            assert request.user, 'Major error, User not set in request'
+            assert request.user
     return wrapper
 
 
@@ -71,15 +71,18 @@ def _read_user() -> Optional[models.user.User]:
     token: str = request.authorization and request.authorization.token or ''
     ip_address = tools.client_public_ip()
     if ip_address and token.startswith('Bearer '):
-        session: Optional[models.session.Session] = models.session.Session.query.filter_by(token=token.split(' ')[-1], ip_address=ip_address).first()
+        session: Optional[models.session.Session] = models.session.Session.query.filter_by(
+            token=token.split(' ')[-1],
+            ip_address=ip_address,
+        ).first()
         if not session:
-            return logger.debug(f'No session was found for IP {ip_address}')
+            return current_app.logger.debug(f'No session was found for IP {ip_address}')
         if not session.active:
-            return logger.debug(f'User {session.user.id} session is not active')
+            return current_app.logger.debug(f'User {session.user.id} session is not active')
         if session.expires_at <= current_datetime:
-            return logger.debug(f'User {session.user.id} token is expired')
+            return current_app.logger.debug(f'User {session.user.id} token is expired')
         if not session.user.active:
-            return logger.debug(f'User {session.user.id} is not active')
+            return current_app.logger.debug(f'User {session.user.id} is not active')
         if session.user.suspend_until and session.user.suspend_until > current_datetime:
-            return logger.debug(f'User {session.user.id} is suspended')
+            return current_app.logger.debug(f'User {session.user.id} is suspended')
         return session.user

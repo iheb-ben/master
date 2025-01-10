@@ -1,17 +1,10 @@
-import datetime
-import functools
 import os
-from typing import Optional
-from flask import request
 from flask_migrate import init, migrate, upgrade
 from app import create_app, socketio
-from app import config, api
-from app.connector import db, check_db_session
+from app import config
 from app.logger import setup_logger
-from app.models.session import Session
-from app.models.user import User
-from app.tools import client_public_ip
-from app.utils.setup import initialize_database, PUBLIC_USER_ID
+from app.connector import db, check_db_session
+from app.utils.setup import initialize_database
 
 server = create_app()
 logger = setup_logger()
