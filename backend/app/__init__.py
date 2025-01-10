@@ -12,7 +12,6 @@ from flask_cors import CORS
 from . import utils
 from . import config
 from . import tools
-from . import logger as logger_config
 from . import connector
 from . import models
 

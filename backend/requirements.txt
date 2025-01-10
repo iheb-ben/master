@@ -16,3 +16,4 @@ python-dotenv==1.0.1
 SQLAlchemy==1.4.54
 Werkzeug==1.0.1
 jsonschema==4.17.3
+pyyaml==6.0.2

@@ -1,0 +1,21 @@
+version: 1
+disable_existing_loggers: true
+formatters:
+  simple:
+    format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+handlers:
+  file:
+    class: logging.FileHandler
+    formatter: simple
+    filename: master.log
+  console:
+    class: logging.StreamHandler
+    formatter: simple
+loggers:
+  werkzeug:
+    level: INFO
+    handlers: [console, file]
+    propagate: true
+root:
+  level: INFO
+  handlers: [console, file]
