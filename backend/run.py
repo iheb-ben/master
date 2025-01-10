@@ -18,6 +18,7 @@ def is_debugging():
 
 # Run the application
 if __name__ == '__main__':
-    config.DEBUG = is_debugging()
+    if is_debugging():
+        config.DEBUG = True
     setup_database(server)  # Ensure database is initialized and upgraded
     socketio.run(app=server, host=config.HOST, debug=config.DEBUG, log_output=True)
