@@ -1,13 +1,9 @@
 import logging
-import os
+from pathlib import Path
 from app import config
 
 
 def setup_logger():
-    logger = logging.getLogger()
-    logger.setLevel(config.LOG_LEVEL)
-    handler = logging.StreamHandler()
-    formatter = logging.Formatter(config.LOG_FORMAT)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
+    log_level: int = logging.DEBUG if config.DEBUG else getattr(logging, config.LOG_LEVEL)
+    log_file = str(Path('.').joinpath('master.log').absolute().resolve())
+    logging.basicConfig(filename=log_file, format=config.LOG_FORMAT, level=log_level, force=True)

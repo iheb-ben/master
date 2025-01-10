@@ -1,4 +1,5 @@
 import inspect
+import os
 from datetime import datetime
 from functools import wraps
 from types import SimpleNamespace
@@ -6,7 +7,7 @@ from typing import Optional, Callable
 from flask import Flask, request, current_app
 from flask_restx import Api
 from flask_socketio import SocketIO
-from flask_migrate import Migrate
+from flask_migrate import init, migrate as migrate_db, upgrade, Migrate
 from flask_cors import CORS
 from . import utils
 from . import config
@@ -51,6 +52,21 @@ def create_app():
     from app import resources
     server.before_request(_read_user)
     return server
+
+
+def setup_database(server: Flask):
+    with server.app_context():
+        # Initialize migrations directory if not present
+        migrations_path = os.path.join(os.getcwd(), 'migrations')
+        if not os.path.exists(migrations_path):
+            init()
+        # Generate migration script if needed
+        migrate_db(message='Auto-generated migration')
+        # Apply migrations
+        upgrade()
+        utils.setup.initialize_database()
+        if connector.check_db_session():
+            connector.db.session.commit()
 
 
 def _before_request(func: Callable):
