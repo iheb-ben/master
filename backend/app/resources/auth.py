@@ -9,9 +9,8 @@ from app.connector import db, rollback_commit
 from app.models.user import User
 from app.models.session import Session
 from app import config, api
-from app.resources import ResponseMessages
 from app.tools import client_public_ip, token_expiration_date, generate_secret_string
-from app.utils import login_required, validate_payload
+from app.utils import login_required, validate_payload, ResponseMessages
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()

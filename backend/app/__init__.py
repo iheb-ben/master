@@ -1,6 +1,6 @@
-import functools
 import inspect
 from datetime import datetime
+from functools import wraps
 from types import SimpleNamespace
 from typing import Optional
 from flask import Flask, request
@@ -8,12 +8,12 @@ from flask_restx import Api
 from flask_socketio import SocketIO
 from flask_migrate import Migrate
 from flask_cors import CORS
-from . import models
+from . import utils
 from . import config
-from . import connector
 from . import tools
 from . import logger
-from . import utils
+from . import connector
+from . import models
 
 migrate = Migrate()
 cors = CORS()
@@ -54,7 +54,7 @@ def create_app():
 
 
 def _before_request(func):
-    @functools.wraps(func)
+    @wraps(func)
     def wrapper(*args, **kwargs) -> None:
         if not hasattr(request, 'user') and request.path.startswith(api.prefix or '/'):
             user: Optional[models.user.User] = func(*args, **kwargs)

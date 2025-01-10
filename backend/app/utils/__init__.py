@@ -1,17 +1,25 @@
 import datetime
-import functools
+from enum import Enum
+from functools import wraps
 from typing import List, Callable
 from flask import request, abort
 from flask_restx import Namespace, Model
 from . import setup
 
 
-def validate_payload(namespace: Namespace, model: Model):
-    from app.resources import ResponseMessages
+class ResponseMessages(Enum):
+    INVALID_CREDENTIALS = 'Invalid username or password'
+    ACCOUNT_SUSPENDED = 'Account is suspended'
+    LOGIN_ERROR = f'{INVALID_CREDENTIALS} | {ACCOUNT_SUSPENDED}'
+    FORBIDDEN = 'Access is denied'
+    SERVER_ERROR = 'Internal server error'
+    REQUIRED_FIELDS = 'Missing required field "%s"'
 
+
+def validate_payload(namespace: Namespace, model: Model):
     def _wrapper(func: Callable):
         @namespace.response(code=400, description=ResponseMessages.REQUIRED_FIELDS.value % 'FIELD_NAME')
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args, **kwargs):
             for field in model.keys():
                 if not namespace.payload.get(field) and model[field].required:
@@ -22,12 +30,10 @@ def validate_payload(namespace: Namespace, model: Model):
 
 
 def login_required(namespace: Namespace):
-    from app.resources import ResponseMessages
-
     def _wrapper(func: Callable):
         @namespace.doc(security='BearerAuth')
         @namespace.response(code=401, description=ResponseMessages.FORBIDDEN.value)
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args, **kwargs):
             for access in request.user.access_rights:
                 if access.name == 'base.public':
@@ -38,12 +44,11 @@ def login_required(namespace: Namespace):
 
 
 def with_access(namespace: Namespace, access_rights=None):
-    from app.resources import ResponseMessages
     access_rights = access_rights or []
 
     def _wrapper(func: Callable):
         @login_required(namespace)
-        @functools.wraps(func)
+        @wraps(func)
         def wrapper(*args, **kwargs):
             if not access_rights:
                 return func(*args, **kwargs)
