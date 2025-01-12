@@ -50,6 +50,7 @@ def create_app():
     socketio.init_app(server)
     from app import resources
     server.url_map.converters['list'] = convertors.ListConverter
+    server.url_map.converters['datetime'] = convertors.DateTimeConverter
     server.before_request(_before_request)
     return server
 
