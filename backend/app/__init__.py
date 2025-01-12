@@ -58,13 +58,10 @@ def create_app():
 
 def setup_database(server: Flask):
     with server.app_context():
-        # Initialize migrations directory if not present
         migrations_path = os.path.join(os.getcwd(), 'migrations')
         if not os.path.exists(migrations_path):
             init()
-        # Generate migration script if needed
         migrate_db(message='Auto-generated migration')
-        # Apply migrations
         upgrade()
         utils.setup.initialize_database()
         if connector.check_db_session():
