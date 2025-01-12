@@ -8,7 +8,6 @@ _config_file = Path('.').joinpath('logging.yaml')
 if _config_file.is_file():
     logging.config.dictConfig(yaml.safe_load(_config_file.read_bytes()))
 logging.getLogger('root').disabled = False
-server = create_app()
 
 
 def is_debugging():
@@ -23,5 +22,6 @@ def is_debugging():
 if __name__ == '__main__':
     if is_debugging():
         config.DEBUG = True
+    server = create_app()
     setup_database(server)  # Ensure database is initialized and upgraded
-    socketio.run(app=server, host=config.HOST, debug=config.DEBUG, log_output=True)
+    socketio.run(app=server, port=config.PORT, debug=config.DEBUG, log_output=True)

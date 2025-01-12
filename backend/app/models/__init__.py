@@ -1,5 +1,6 @@
 from flask import request
 from datetime import datetime
+from app import config
 from app.connector import db
 from app.tools import current_user_id
 
@@ -27,3 +28,5 @@ class BaseModel(db.Model):
 
 from . import user
 from . import session
+if config.MODE == 'master':
+    from . import commit
