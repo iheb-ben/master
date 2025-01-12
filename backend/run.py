@@ -1,10 +1,13 @@
 from app import create_app, config, setup_database, socketio
+from pathlib import Path
 import logging.config
-import pathlib
 import yaml
 import sys
 
-logging.config.dictConfig(yaml.safe_load(pathlib.Path('.').joinpath('logging.yaml').read_bytes()))
+_config_file = Path('.').joinpath('logging.yaml')
+if _config_file.is_file():
+    logging.config.dictConfig(yaml.safe_load(_config_file.read_bytes()))
+logging.getLogger('root').disabled = False
 server = create_app()
 
 
