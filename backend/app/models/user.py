@@ -14,16 +14,11 @@ class Partner(BaseModel):
     lastname = db.Column(db.String(80), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     user = db.relationship('User', back_populates='partner')
 
 
 class User(db.Model):
-    # Enforce role selection
-    __table_args__ = (
-        db.CheckConstraint("role IN ('public', 'user')", name='check_user_role'),
-    )
-
     id = db.Column(db.Integer, primary_key=True)
     active = db.Column(db.Boolean, default=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -36,8 +31,7 @@ class User(db.Model):
     partner = db.relationship(
         'Partner',
         back_populates='user',
-        uselist=False,  # Ensures one-to-one relationship
-        cascade='all, delete-orphan'
+        uselist=False,
     )
     access_rights = db.relationship(
         'AccessRight',
