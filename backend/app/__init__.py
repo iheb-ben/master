@@ -9,8 +9,8 @@ from flask_restx import Api
 from flask_socketio import SocketIO
 from flask_migrate import init, migrate as migrate_db, upgrade, Migrate
 from flask_cors import CORS
-from . import utils
 from . import config
+from . import utils
 from . import convertors
 from . import tools
 from . import connector
@@ -52,6 +52,7 @@ def create_app():
     server.url_map.converters['list'] = convertors.ListConverter
     server.url_map.converters['datetime'] = convertors.DateTimeConverter
     server.before_request(_before_request)
+    server.logger.info(f'github key: {utils.configuration.secret_key}')
     return server
 
 

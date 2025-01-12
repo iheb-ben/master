@@ -3,8 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+SECRET_KEY = getenv('SECRET_KEY', '')
+FOLDER = getenv('FOLDER', '')
 TESTING = getenv('TESTING', '').strip().upper() in ('1', 'TRUE')
-ENV = getenv('ENV', 'development')
+ENV = getenv('ENV', 'production')
 HOST = getenv('HOST', '127.0.0.1')
 PORT = int(getenv('PORT', '5000'))
 SERVER_NAME = getenv('SERVER_NAME', f'{HOST}:{PORT}')

@@ -8,4 +8,5 @@ commit_ns: Namespace = api.namespace(name='Commits', path='/commits', descriptio
 @commit_ns.route('/webhook')
 class WebHook(Resource):
     def post(self):
+        print(commit_ns.payload)
         return {'message': 'Commit was added'}, 200
