@@ -111,7 +111,8 @@ def _before_request():
 
 def _after_request(response):
     path = request.path
+    method = request.method
     status_code = response.status
     content_length = response.headers.get('Content-Length', '0')
-    logging.getLogger('root').info(f"Path: {path}, Status: {status_code}, Response Size: {content_length} bytes")
+    current_app.logger.info(f"Method: {method}, Path: {path}, Status: {status_code}, Response Size: {content_length} bytes")
     return response
