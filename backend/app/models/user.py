@@ -16,9 +16,14 @@ class Partner(BaseModel):
     phone_number = db.Column(db.String(30), nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     user = db.relationship('User', back_populates='partner')
+    commits = db.relationship('Commit', back_populates='partner')
 
 
 class User(db.Model):
+    __table_args__ = (
+        db.CheckConstraint("role IN ('bot', 'user')", name='check_user_role'),
+    )
+
     id = db.Column(db.Integer, primary_key=True)
     active = db.Column(db.Boolean, default=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
@@ -26,7 +31,7 @@ class User(db.Model):
     sessions = db.relationship(
         'Session',
         back_populates='user',
-        cascade='all, delete-orphan'
+        cascade='all, delete-orphan',
     )
     partner = db.relationship(
         'Partner',
@@ -36,11 +41,12 @@ class User(db.Model):
     access_rights = db.relationship(
         'AccessRight',
         secondary=user_access_right,
-        backref=db.backref('users', lazy='dynamic')
+        backref=db.backref('users', lazy='dynamic'),
     )
     suspend_until = db.Column(db.DateTime(), nullable=True)
     # Account settings
     single_session_mode = db.Column(db.Boolean)
+    role = db.Column(db.String(4), nullable=False, default='user')
 
 
 class AccessRightCategory(BaseModel):

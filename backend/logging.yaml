@@ -16,6 +16,10 @@ loggers:
     level: INFO
     handlers: [console, file]
     propagate: true
+  app.utils.setup:
+    level: INFO
+    handlers: [console, file]
+    propagate: true
 root:
   level: INFO
   handlers: [console, file]

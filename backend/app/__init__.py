@@ -44,7 +44,7 @@ def create_app():
     server = Flask(import_name=__name__)
     server.config.from_object(configuration)
     api.init_app(server)
-    cors.init_app(server, resources={r"/*": {"origins": "http://127.0.0.1:3000"}})
+    cors.init_app(server, resources={r'/*': {'origins': 'http://127.0.0.1:3000'}})
     connector.db.init_app(server)
     migrate.init_app(server, connector.db)
     socketio.init_app(server)
@@ -52,7 +52,6 @@ def create_app():
     server.url_map.converters['list'] = convertors.ListConverter
     server.url_map.converters['datetime'] = convertors.DateTimeConverter
     server.before_request(_before_request)
-    server.logger.info(f'github key: {utils.configuration.secret_key}')
     return server
 
 

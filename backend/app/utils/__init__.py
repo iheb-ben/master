@@ -5,7 +5,6 @@ from typing import List, Callable
 from flask import request, abort
 from flask_restx import Namespace, Model
 from . import setup
-from . import configuration
 
 
 class ResponseMessages(Enum):

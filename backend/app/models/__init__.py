@@ -15,8 +15,10 @@ class BaseModel(db.Model):
     def __init_subclass__(cls):
         @db.event.listens_for(cls, 'before_insert')
         def set_create_metadata(mapper, connection, target):
-            target.create_date = datetime.utcnow()
-            target.create_uid = current_user_id()
+            if not target.create_date:
+                target.create_date = datetime.utcnow()
+            if not target.create_uid:
+                target.create_uid = current_user_id()
 
         @db.event.listens_for(cls, 'before_update')
         def set_write_metadata(mapper, connection, target):
@@ -27,3 +29,4 @@ class BaseModel(db.Model):
 from . import user
 from . import session
 from . import commit
+from . import system
