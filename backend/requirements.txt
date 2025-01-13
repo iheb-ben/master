@@ -8,6 +8,7 @@ Flask-SQLAlchemy==2.5.1
 greenlet==3.1.1
 Jinja2==2.11.3
 kafka-python==2.0.2
+sqlalchemy-utils==0.41.2
 MarkupSafe==2.0.1
 psycopg2==2.9.9
 psycopg2-binary==2.9.10

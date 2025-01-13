@@ -95,9 +95,8 @@ def setup_partners() -> Dict[int, Partner]:
 def setup_default_key() -> ApiKey:
     api_key: Optional[ApiKey] = ApiKey.query.filter_by(domain=None).first()
     if not api_key:
-        api_key = ApiKey(domain=domain_string, key=secrets.token_hex(32))
+        api_key = ApiKey(key=secrets.token_hex(32))
         db.session.add(api_key)
-    _logger.info(f'secret: {api_key.key}')
     return api_key
 
 
@@ -110,8 +109,9 @@ def db_initialized() -> Parameter:
 
 
 def initialize_database():
+    logging.getLogger('app.utils.setup').disabled = False
     parameter = db_initialized()
     if parameter.value != '1':
         setup_partners()
-        setup_default_key()
         parameter.value = '1'
+    _logger.info(f'secret: {setup_default_key().key}')

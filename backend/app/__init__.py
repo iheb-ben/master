@@ -1,4 +1,5 @@
 import inspect
+import logging
 import os
 from datetime import datetime
 from functools import wraps
@@ -9,6 +10,8 @@ from flask_restx import Api
 from flask_socketio import SocketIO
 from flask_migrate import init, migrate as migrate_db, upgrade, Migrate
 from flask_cors import CORS
+from sqlalchemy import create_engine
+from sqlalchemy_utils import database_exists, create_database
 from . import config
 from . import utils
 from . import convertors
@@ -52,14 +55,23 @@ def create_app():
     server.url_map.converters['list'] = convertors.ListConverter
     server.url_map.converters['datetime'] = convertors.DateTimeConverter
     server.before_request(_before_request)
+    server.after_request(_after_request)
     return server
 
 
+def ensure_database_exists(server: Flask):
+    db_uri = server.config['SQLALCHEMY_DATABASE_URI']
+    engine = create_engine(db_uri)
+    if not database_exists(engine.url):
+        create_database(engine.url)
+
+
 def setup_database(server: Flask):
+    ensure_database_exists(server)
     with server.app_context():
         migrations_path = os.path.join(os.getcwd(), 'migrations')
         if not os.path.exists(migrations_path):
-            init()
+            init(template='flask')
         migrate_db(message='Auto-generated migration')
         upgrade()
         utils.setup.initialize_database()
@@ -95,3 +107,11 @@ def _before_request():
             user = models.user.User.query.filter_by(id=utils.setup.PUBLIC_USER_ID).first()
         request.user = user
         assert request.user
+
+
+def _after_request(response):
+    path = request.path
+    status_code = response.status
+    content_length = response.headers.get('Content-Length', '0')
+    logging.getLogger('root').info(f"Path: {path}, Status: {status_code}, Response Size: {content_length} bytes")
+    return response
