@@ -27,8 +27,7 @@ def github_webhook_wrapper(func):
         signature = request.headers.get('X-Hub-Signature-256', '')
         if not signature:
             abort(403, description='Missing signature')
-        payload = request.data
-        if not verify_github_signature(payload, signature):
+        if not verify_github_signature(request.data, signature):
             abort(403, description='Invalid signature')
         event_type = request.headers.get('X-Github-Event', 'ping')
         if event_type == 'ping':
