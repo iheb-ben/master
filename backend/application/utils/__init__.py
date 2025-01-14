@@ -1,7 +1,7 @@
 import datetime
 from enum import Enum
 from functools import wraps
-from typing import List, Callable
+from typing import List, Callable, Iterable
 from flask import request, abort
 from flask_restx import Namespace, Model
 from . import setup
@@ -45,6 +45,7 @@ def login_required(namespace: Namespace):
 
 def with_access(namespace: Namespace, access_rights=None):
     access_rights = access_rights or []
+    assert isinstance(access_rights, Iterable)
 
     def _wrapper(func: Callable):
         @login_required(namespace)

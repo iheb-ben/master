@@ -1,6 +1,6 @@
 from flask_socketio import Namespace, emit
-from app.services.websocket_service import handle_message
-from app import socketio
+from application.services.websocket_service import handle_message
+from application import socketio
 
 
 # noinspection PyMethodMayBeStatic

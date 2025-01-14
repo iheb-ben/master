@@ -4,7 +4,7 @@ import hashlib
 import base64
 from typing import Tuple
 from flask import request
-from app import config
+from application import config
 
 
 def generate_secret_string(input_string: str) -> str:
@@ -44,5 +44,5 @@ def current_user_id():
     try:
         return request.user.id
     except (RuntimeError, AttributeError):
-        from app.utils.setup import SUPER_USER_ID
+        from application.utils.setup import SUPER_USER_ID
         return SUPER_USER_ID

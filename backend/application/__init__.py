@@ -12,6 +12,7 @@ from flask_migrate import init, migrate as migrate_db, upgrade, Migrate
 from flask_cors import CORS
 from sqlalchemy import create_engine
 from sqlalchemy_utils import database_exists, create_database
+from . import logger
 from . import config
 from . import utils
 from . import convertors
@@ -19,6 +20,7 @@ from . import tools
 from . import connector
 from . import models
 
+_logger = logger.get_logger(__name__, logging.DEBUG)
 migrate = Migrate()
 cors = CORS()
 socketio = SocketIO()
@@ -51,7 +53,7 @@ def create_app():
     connector.db.init_app(server)
     migrate.init_app(server, connector.db)
     socketio.init_app(server)
-    from app import resources
+    from application import resources
     server.url_map.converters['list'] = convertors.ListConverter
     server.url_map.converters['datetime'] = convertors.DateTimeConverter
     server.before_request(_before_request)
@@ -114,5 +116,5 @@ def _after_request(response):
     method = request.method
     status_code = response.status
     content_length = response.headers.get('Content-Length', '0')
-    current_app.logger.info(f"Method: {method}, Path: {path}, Status: {status_code}, Response Size: {content_length} bytes")
+    _logger.info(f"Method: {method}, Path: {path}, Status: {status_code}, Response Size: {content_length} bytes")
     return response

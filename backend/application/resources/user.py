@@ -1,9 +1,9 @@
 from flask_restx import Namespace, Resource, fields
-from app.connector import db
-from app.models.user import User
-from app.utils import login_required, with_access
-from app.tools import generate_secret_string
-from app import api
+from application.connector import db
+from application.models.user import User
+from application.utils import login_required, with_access
+from application.tools import generate_secret_string
+from application import api
 
 user_ns: Namespace = api.namespace(name='Users', path='/users', description='User management operations')
 user_model = user_ns.model(name='User', model={

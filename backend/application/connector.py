@@ -1,7 +1,7 @@
 import functools
 from typing import Callable
 from flask_sqlalchemy import SQLAlchemy
-from app import config
+from application import config
 
 db = SQLAlchemy()
 

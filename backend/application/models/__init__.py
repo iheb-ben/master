@@ -1,6 +1,6 @@
 from datetime import datetime
-from app.connector import db
-from app.tools import current_user_id
+from application.connector import db
+from application.tools import current_user_id
 
 
 class BaseModel(db.Model):

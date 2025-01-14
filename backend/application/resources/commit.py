@@ -1,9 +1,9 @@
 import functools
 from datetime import datetime
-from app import api
+from application import api
 from flask import request, abort
 from flask_restx import Namespace, Resource
-from app.models.system import ApiKey
+from application.models.system import ApiKey
 import hmac
 import hashlib
 

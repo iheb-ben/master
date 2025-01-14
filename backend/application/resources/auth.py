@@ -1,16 +1,15 @@
 import datetime
-import logging
 from typing import Optional
 from dateutil.relativedelta import relativedelta
 from flask_restx import Namespace, Resource, fields, reqparse
 from flask import request, abort
 import jwt
-from app.connector import db, rollback_commit
-from app.models.user import User
-from app.models.session import Session
-from app import config, api
-from app.tools import client_public_ip, token_expiration_date, generate_secret_string
-from app.utils import login_required, validate_payload, ResponseMessages
+from application.connector import db, rollback_commit
+from application.models.user import User
+from application.models.session import Session
+from application import config, api
+from application.tools import client_public_ip, token_expiration_date, generate_secret_string
+from application.utils import login_required, validate_payload, ResponseMessages
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()
@@ -42,7 +41,6 @@ login_response = auth_ns.model(name='LoginResponse', model={
     'token': fields.String(description='JWT token for authentication'),
     'expires_at': fields.String(description='Token expiration date in ISO 8601 format')
 })
-_logger = logging.getLogger(__name__)
 
 
 @auth_ns.route('/login')

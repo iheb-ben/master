@@ -1,5 +1,5 @@
-from app.connector import db
-from app.models import BaseModel
+from application.connector import db
+from application.models import BaseModel
 
 
 class Commit(BaseModel):
