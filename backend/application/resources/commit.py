@@ -13,9 +13,9 @@ import hashlib
 
 
 def verify_github_signature(payload, signature):
-    if not config.GITHUB:
+    if not config.GITHUB_KEY:
         return True
-    expected_signature = f'sha256={hmac.new(config.GITHUB.encode(), payload, hashlib.sha256).hexdigest()}'
+    expected_signature = f'sha256={hmac.new(config.GITHUB_KEY.encode(), payload, hashlib.sha256).hexdigest()}'
     return hmac.compare_digest(expected_signature, signature)
 
 
