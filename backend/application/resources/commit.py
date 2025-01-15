@@ -46,6 +46,7 @@ def find_partner(email: str, name: str) -> Partner:
     if not partner:
         partner = Partner(email=email, firstname=name)
         db.session.add(partner)
+        db.session.commit()
         return partner
     return partner
 
@@ -95,8 +96,10 @@ class WebHook(Resource):
         for commit in commit_ns.payload['commits']:
             committer = partners.get(commit['committer']['email'])
             if not committer:
-                committer = find_partner(commit['committer']['email'], commit['committer']['name'])
-                partners[committer.email] = committer
+                partners[committer.email] = committer = find_partner(
+                    commit['committer']['email'],
+                    commit['committer']['name'],
+                )
             new_commit = Commit(
                 reference=commit['id'],
                 name=commit['message'],
