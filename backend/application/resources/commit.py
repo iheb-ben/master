@@ -100,12 +100,11 @@ class WebHook(Resource):
                     name=commit['committer']['name'],
                     email=comitter_email,
                 )
-            new_commit = Commit(
+            db.session.add(Commit(
                 reference=commit['id'],
                 name=commit['message'],
                 timestamp=datetime.fromisoformat(commit['timestamp']),
                 partner_id=committer.id,
                 branch_id=branch.id,
-            )
-            db.session.add(new_commit)
+            ))
             db.session.commit()
