@@ -47,7 +47,6 @@ def find_partner(email: str, name: str) -> Partner:
         partner = Partner(email=email, firstname=name)
         db.session.add(partner)
         db.session.commit()
-        return partner
     return partner
 
 
@@ -84,7 +83,7 @@ class WebHook(Resource):
             db.session.add(branch)
             db.session.commit()
         else:
-            branch: Optional[Branch] = Branch.query.filter_by(repository_id=repository.id).first()
+            branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
             if not branch:
                 branch = Branch(
                     name=branch_name,
