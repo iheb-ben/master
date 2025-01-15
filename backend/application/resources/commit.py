@@ -74,11 +74,12 @@ class WebHook(Resource):
                 name=commit_ns.payload['repository']['name'],
                 owner_id=owner.id,
             )
+            db.session.add(repository)
+            db.session.commit()
             branch = Branch(
                 name=branch_name,
                 repository_id=repository.id,
             )
-            db.session.add(repository)
             db.session.add(branch)
             db.session.commit()
         else:
