@@ -37,6 +37,6 @@ if __name__ == '__main__':
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
-    setup_database(server)  # Ensure database is initialized and upgraded
+    setup_database(server)
     logger.disabled = False
     socketio.run(app=server, port=config.PORT, debug=config.DEBUG, log_output=True)
