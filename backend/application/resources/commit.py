@@ -2,7 +2,7 @@ import functools
 from datetime import datetime
 from typing import Optional
 from application import api, config
-from application.connector import db, rollback_commit
+from application.connector import db
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
 from application.utils import log_error
@@ -12,7 +12,7 @@ import hmac
 import hashlib
 
 
-def verify_github_signature(payload, signature):
+def verify_github_signature(payload, signature) -> bool:
     if not config.GITHUB_KEY:
         return True
     expected_signature = f'sha256={hmac.new(config.GITHUB_KEY.encode(), payload, hashlib.sha256).hexdigest()}'
@@ -54,9 +54,8 @@ def find_partner(email: str, name: str) -> Partner:
 @commit_ns.route('/webhook')
 class WebHook(Resource):
     @github_webhook_wrapper
-    @rollback_commit
     @log_error
-    def post(self):
+    def post(self) -> None:
         owner: Optional[Partner] = Partner.query.filter_by(github_id=commit_ns.payload['repository']['owner']['id']).first()
         if not owner:
             owner = Partner(

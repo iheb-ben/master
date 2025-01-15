@@ -66,6 +66,6 @@ def log_error(func: Callable):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            current_app.logger.error(f'Error found: {e}', exc_info=True)
+            current_app.logger.error(e, exc_info=True)
             raise e
     return wrapper
