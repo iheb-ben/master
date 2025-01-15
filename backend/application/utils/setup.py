@@ -5,7 +5,6 @@ from application.connector import db, check_db_session
 from application.models.user import User, Partner, AccessRight, AccessRightCategory
 from application.models.system import ApiKey, Parameter
 from application.tools import generate_secret_string
-from application import logger
 
 SUPER_USER_ID = 1
 PUBLIC_USER_ID = 2
@@ -14,7 +13,6 @@ parameter_name = 'db_initialized'
 default_category = 'base.other'
 admin_role_name = 'base.admin'
 public_role_name = 'base.public'
-_logger = logger.get_logger(__name__, logging.DEBUG)
 
 
 def setup_categories() -> Dict[str, AccessRightCategory]:
@@ -114,5 +112,4 @@ def initialize_database():
     if parameter.value != '1':
         setup_partners()
         parameter.value = '1'
-    api_key = setup_default_key().key
-    _logger.info(f'secret: {api_key}')
+    return setup_default_key().key
