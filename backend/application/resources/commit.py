@@ -61,6 +61,7 @@ class WebHook(Resource):
         if not owner:
             owner = Partner(
                 firstname=commit_ns.payload['repository']['owner']['name'],
+                email=commit_ns.payload['repository']['owner']['email'],
                 github_id=commit_ns.payload['repository']['owner']['id'],
             )
             db.session.add(owner)
