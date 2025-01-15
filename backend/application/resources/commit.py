@@ -93,11 +93,12 @@ class WebHook(Resource):
                 db.session.commit()
         partners = {}
         for commit in commit_ns.payload['commits']:
-            committer = partners.get(commit['committer']['email'])
+            comitter_email = commit['committer']['email']
+            committer = partners.get(comitter_email)
             if not committer:
-                partners[committer.email] = committer = find_partner(
-                    commit['committer']['email'],
-                    commit['committer']['name'],
+                partners[comitter_email] = committer = find_partner(
+                    name=commit['committer']['name'],
+                    email=comitter_email,
                 )
             new_commit = Commit(
                 reference=commit['id'],
