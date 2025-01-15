@@ -77,6 +77,7 @@ class WebHook(Resource):
             db.session.commit()
             branch = Branch(
                 name=branch_name,
+                head_commit_id=commit_ns.payload['head_commit']['id'],
                 repository_id=repository.id,
             )
             db.session.add(branch)
@@ -86,10 +87,13 @@ class WebHook(Resource):
             if not branch:
                 branch = Branch(
                     name=branch_name,
+                    head_commit_id=commit_ns.payload['head_commit']['id'],
                     repository_id=repository.id,
                 )
                 db.session.add(branch)
-                db.session.commit()
+            else:
+                branch.head_commit_id = commit_ns.payload['head_commit']['id']
+            db.session.commit()
         partners = {}
         for commit in commit_ns.payload['commits']:
             comitter_email = commit['committer']['email']
