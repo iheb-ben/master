@@ -2,7 +2,7 @@ import datetime
 from enum import Enum
 from functools import wraps
 from typing import List, Callable, Iterable
-from flask import request, abort
+from flask import request, abort, current_app
 from flask_restx import Namespace, Model
 from . import setup
 
@@ -59,3 +59,13 @@ def with_access(namespace: Namespace, access_rights=None):
             abort(403, ResponseMessages.FORBIDDEN.value)
         return wrapper
     return _wrapper
+
+
+def log_error(func: Callable):
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            current_app.logger.error(f'Error found: {e}', exc_info=True)
+            raise e
+    return wrapper

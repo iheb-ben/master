@@ -22,6 +22,7 @@ if __name__ == '__main__':
         config.DEBUG = True
     server = create_app()
     logger = flask_logging.create_logger(server)
+    logger.setLevel(logging.DEBUG)
     formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
     for handler in logger.handlers:
         handler.setLevel(logging.NOTSET)
@@ -32,9 +33,10 @@ if __name__ == '__main__':
         makedirs(file.parent, exist_ok=True)
     if not file.is_file():
         file.touch()
-    file_handler = RotatingFileHandler(file, maxBytes=100 * 1024 * 1024, backupCount=5)
-    file_handler.setLevel(logger.level)
+    file_handler = RotatingFileHandler(file, maxBytes=10 * 1024 * 1024, backupCount=5)
+    file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
     setup_database(server)  # Ensure database is initialized and upgraded
+    logger.disabled = False
     socketio.run(app=server, port=config.PORT, debug=config.DEBUG, log_output=True)

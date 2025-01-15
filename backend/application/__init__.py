@@ -59,24 +59,21 @@ def create_app():
     return server
 
 
-def ensure_database_exists(server: Flask):
-    db_uri = server.config['SQLALCHEMY_DATABASE_URI']
-    engine = create_engine(db_uri)
+def ensure_database_exists():
+    engine = create_engine(config.SQLALCHEMY_DATABASE_URI)
     if not database_exists(engine.url):
         create_database(engine.url)
 
 
 def setup_database(server: Flask):
-    ensure_database_exists(server)
+    ensure_database_exists()
     with server.app_context():
         migrations_path = os.path.join(os.getcwd(), 'migrations')
         if not os.path.exists(migrations_path):
             init(template='flask')
         migrate_db(message='Auto-generated migration')
         upgrade()
-        server.logger.disabled = False
-        api_key = utils.setup.initialize_database()
-        server.logger.info(f'secret: {api_key}')
+        utils.setup.initialize_database()
         if connector.check_db_session():
             connector.db.session.commit()
 

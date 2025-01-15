@@ -3,7 +3,7 @@ import secrets
 from typing import Optional, Dict
 from application.connector import db, check_db_session
 from application.models.user import User, Partner, AccessRight, AccessRightCategory
-from application.models.system import ApiKey, Parameter
+from application.models.system import Parameter
 from application.tools import generate_secret_string
 
 SUPER_USER_ID = 1
@@ -82,21 +82,12 @@ def setup_partners() -> Dict[int, Partner]:
         if not partner:
             partner = Partner(
                 firstname=account.username,
-                lastname='Account',
                 email=f'{account.username}@exemple.com',
                 user_id=user_id,
             )
             db.session.add(partner)
         result[user_id] = partner
     return result
-
-
-def setup_default_key() -> ApiKey:
-    api_key: Optional[ApiKey] = ApiKey.query.filter_by(domain=None).first()
-    if not api_key:
-        api_key = ApiKey(key=secrets.token_hex(32))
-        db.session.add(api_key)
-    return api_key
 
 
 def db_initialized() -> Parameter:
@@ -112,4 +103,3 @@ def initialize_database():
     if parameter.value != '1':
         setup_partners()
         parameter.value = '1'
-    return setup_default_key().key

@@ -9,7 +9,7 @@ from application.models.user import User
 from application.models.session import Session
 from application import config, api
 from application.tools import client_public_ip, token_expiration_date, generate_secret_string
-from application.utils import login_required, validate_payload, ResponseMessages
+from application.utils import login_required, validate_payload, log_error, ResponseMessages
 
 auth_ns: Namespace = api.namespace(name='Authentication', path='/auth', description='Authentication operations')
 header_parser = reqparse.RequestParser()
@@ -50,6 +50,7 @@ class LoginResource(Resource):
     @auth_ns.response(code=401, description=ResponseMessages.LOGIN_ERROR.value)
     @validate_payload(auth_ns, login_request)
     @rollback_commit
+    @log_error
     def post(self):
         """Authenticate user and generate a token"""
         username = str(auth_ns.payload['username']).strip()
@@ -112,6 +113,7 @@ class LogoutResource(Resource):
     @auth_ns.response(200, 'Logout successful')
     @login_required(auth_ns)
     @rollback_commit
+    @log_error
     def post(self):
         """Logout user and invalidate session"""
         ip_address = client_public_ip()

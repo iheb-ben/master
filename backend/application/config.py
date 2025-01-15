@@ -4,8 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 LOG_FILE = getenv('LOG_FILE', '')
-SECRET_KEY = getenv('SECRET_KEY', '')
-FOLDER = getenv('FOLDER', '')
+GITHUB_KEY = getenv('GITHUB_KEY', '')
 TESTING = getenv('TESTING', '').strip().upper() in ('1', 'TRUE')
 ENV = getenv('ENV', 'production')
 HOST = getenv('HOST', '127.0.0.1')

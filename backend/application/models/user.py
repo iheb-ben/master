@@ -11,9 +11,10 @@ user_access_right = db.Table(
 class Partner(BaseModel):
     id = db.Column(db.Integer, primary_key=True)
     firstname = db.Column(db.String(80), nullable=False)
-    lastname = db.Column(db.String(80), nullable=False)
+    lastname = db.Column(db.String(80), nullable=True)
     email = db.Column(db.String(255), unique=True, nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
+    github_id = db.Column(db.Integer, unique=True, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     user = db.relationship('User', back_populates='partner')
     commits = db.relationship('Commit', back_populates='partner')
