@@ -71,11 +71,11 @@ class WebHook(Resource):
             repository = Repository(
                 github_id=commit_ns.payload['repository']['id'],
                 name=commit_ns.payload['repository']['name'],
-                owner=owner,
+                owner_id=owner.id,
             )
             branch = Branch(
                 name=branch_name,
-                repository=repository,
+                repository_id=repository.id,
             )
             db.session.add(repository)
             db.session.add(branch)
@@ -84,7 +84,7 @@ class WebHook(Resource):
             if not branch:
                 branch = Branch(
                     name=branch_name,
-                    repository=repository,
+                    repository_id=repository.id,
                 )
                 db.session.add(branch)
         partners = {}
@@ -97,7 +97,7 @@ class WebHook(Resource):
                 reference=commit['id'],
                 name=commit['message'],
                 timestamp=datetime.fromisoformat(commit['timestamp']),
-                partner=committer,
-                branch=branch,
+                partner_id=committer.id,
+                branch_id=branch.id,
             )
             db.session.add(new_commit)
