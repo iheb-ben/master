@@ -65,6 +65,7 @@ class WebHook(Resource):
                 github_id=commit_ns.payload['repository']['owner']['id'],
             )
             db.session.add(owner)
+            db.session.commit()
         branch_name: str = commit_ns.payload['ref'].split('/')[-1]
         repository: Optional[Repository] = Repository.query.filter_by(github_id=commit_ns.payload['repository']['id']).first()
         if not repository:
@@ -79,6 +80,7 @@ class WebHook(Resource):
             )
             db.session.add(repository)
             db.session.add(branch)
+            db.session.commit()
         else:
             branch: Optional[Branch] = Branch.query.filter_by(repository_id=repository.id).first()
             if not branch:
@@ -87,6 +89,7 @@ class WebHook(Resource):
                     repository_id=repository.id,
                 )
                 db.session.add(branch)
+                db.session.commit()
         partners = {}
         for commit in commit_ns.payload['commits']:
             committer = partners.get(commit['committer']['email'])
@@ -101,3 +104,4 @@ class WebHook(Resource):
                 branch_id=branch.id,
             )
             db.session.add(new_commit)
+            db.session.commit()
