@@ -128,5 +128,4 @@ class WebHook(Resource):
                 partner_id=committer.id,
                 branch_id=branch.id,
             ))
-        if commits:
             db.session.commit()
