@@ -78,11 +78,11 @@ class WebHook(Resource):
             db.session.add(repository)
             db.session.commit()
             if config.GITHUB_TOKEN:
-                for branch_name in get_all_branches(owner.github_username, repository.name):
-                    if Branch.query.filter_by(name=branch_name, repository_id=repository.id).first():
+                for endpoint_branch_name in get_all_branches(owner.github_username, repository.name):
+                    if Branch.query.filter_by(name=endpoint_branch_name, repository_id=repository.id).first():
                         continue
                     db.session.add(Branch(
-                        name=branch_name,
+                        name=endpoint_branch_name,
                         repository_id=repository.id,
                     ))
                 if check_db_session():
