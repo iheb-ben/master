@@ -107,7 +107,7 @@ class WebHook(Resource):
             }
             if not last_commit:
                 pass
-            elif last_commit.reference != commit_ns.payload['head_commit']['id']:
+            elif last_commit.reference != commit_ns.payload['before']:
                 parameters['from_commit'] = last_commit.reference
             else:
                 parameters = {}
