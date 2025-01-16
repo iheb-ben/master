@@ -20,20 +20,22 @@ def get_all_branches(owner: str, repository: str) -> List[str]:
 
 
 def get_all_commits(owner: str, repository: str, branch: str) -> List[Dict]:
+    def build_commit_response(commit: Dict):
+        timestamp = datetime.strptime(commit['commit']['author']['date'], '%Y-%m-%dT%H:%M:%SZ')
+        return {
+            'id': commit['sha'],
+            'message': commit['commit']['message'],
+            'committer': {
+                'name': commit['commit']['committer']['name'],
+                'email': commit['commit']['committer']['email'],
+                'username': commit['committer']['login'],
+            },
+            'timestamp': timestamp.replace(tzinfo=timezone.utc).isoformat(),
+        }
+
     url = f'{BASE_URL}/repos/{owner}/{repository}/commits'
     response = get_url(url, headers=HEADERS, params={'sha': branch})
     if response.status_code != 200:
         raise HTTPError(f"Failed to fetch commits: {response.status_code}, {response.json()}")
     commits = response.json()
-    return [{
-        'id': commit['sha'],
-        'message': commit['commit']['message'],
-        'committer': {
-            'name': commit['commit']['committer']['name'],
-            'email': commit['commit']['committer']['email'],
-            'username': commit['committer']['login'],
-        },
-        'timestamp': datetime.strptime(commit['commit']['author']['date'], '%Y-%m-%dT%H:%M:%SZ').replace(
-            tzinfo=timezone.utc,
-        ).isoformat(),
-    } for commit in commits]
+    return [build_commit_response(c) for c in commits]
