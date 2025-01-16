@@ -97,7 +97,7 @@ class WebHook(Resource):
             db.session.add(branch)
             db.session.commit()
         partners = {}
-        commits: List[Dict] = []
+        commits: List[Dict] = commit_ns.payload['commits']
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
         if config.GITHUB_TOKEN:
             parameters = {
@@ -112,7 +112,7 @@ class WebHook(Resource):
             else:
                 parameters = {}
             if parameters:
-                commits = get_all_commits(**parameters) + commit_ns.payload['commits']
+                commits = get_all_commits(**parameters)
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
                 continue
