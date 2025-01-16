@@ -1,3 +1,4 @@
+from datetime import datetime, timezone
 from application import config
 from typing import List, Dict
 from requests import HTTPError, get as get_url
@@ -32,5 +33,7 @@ def get_all_commits(owner: str, repository: str, branch: str) -> List[Dict]:
             'email': commit['commit']['committer']['email'],
             'username': commit['committer']['login'],
         },
-        'timestamp': commit['commit']['author']['date'],
+        'timestamp': datetime.strptime(commit['commit']['author']['date'], '%Y-%m-%dT%H:%M:%SZ').replace(
+            tzinfo=timezone.utc,
+        ).isoformat(),
     } for commit in commits]

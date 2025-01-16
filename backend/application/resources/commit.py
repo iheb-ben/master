@@ -119,4 +119,3 @@ class WebHook(Resource):
                 branch_id=branch.id,
             ))
             db.session.commit()
-
