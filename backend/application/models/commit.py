@@ -12,7 +12,6 @@ class Repository(db.Model):
 class Branch(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(255), nullable=False, index=True)
-    head_commit_id = db.Column(db.String(255), nullable=True)
     repository_id = db.Column(db.Integer, db.ForeignKey('repository.id', ondelete='CASCADE'), nullable=False)
     repository = db.relationship('Repository', back_populates='branches')
     commits = db.relationship('Commit', back_populates='branch', cascade='all, delete-orphan')

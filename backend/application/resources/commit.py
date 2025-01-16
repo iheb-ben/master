@@ -75,6 +75,9 @@ class WebHook(Resource):
             )
             db.session.add(repository)
             db.session.commit()
+            if config.GITHUB_TOKEN:
+                # TODO: extract all branches
+                pass
         branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
         if not branch:
             branch = Branch(
@@ -82,10 +85,11 @@ class WebHook(Resource):
                 repository_id=repository.id,
             )
             db.session.add(branch)
-        db.session.commit()
+            db.session.commit()
         partners = {}
-        if branch.head_commit_id and branch.head_commit_id != commit_ns.payload['before'] and config.GITHUB_TOKEN:
-            # TODO: extract previous commits and store them in db
+        last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
+        if last_commit and last_commit.reference != commit_ns.payload['before'] and config.GITHUB_TOKEN:
+            # TODO: extract all commits between the current last commit the received commits
             pass
         for commit in commit_ns.payload['commits']:
             if Commit.query.filter_by(reference=commit['id']).first():
@@ -104,5 +108,4 @@ class WebHook(Resource):
                 partner_id=committer.id,
                 branch_id=branch.id,
             ))
-            branch.head_commit_id = commit['id']
             db.session.commit()
