@@ -6,7 +6,7 @@ from application.connector import db
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
 from application.utils import log_error
-from application.utils.github import get_all_branches, get_all_commits, get_commits
+from application.utils.github import get_all_branches, get_all_commits
 from flask import request, abort
 from flask_restx import Namespace, Resource
 import hmac
@@ -100,15 +100,19 @@ class WebHook(Resource):
         commits: List[Dict] = []
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
         if config.GITHUB_TOKEN:
+            parameters = {
+                'owner': owner.github_username,
+                'repository': repository.name,
+                'branch': branch.name,
+            }
             if not last_commit:
-                commits = get_all_commits(owner.github_username, repository.name, branch.name) + commit_ns.payload['commits']
+                pass
             elif last_commit.reference != commit_ns.payload['head_commit']['id']:
-                commits = get_commits(
-                    owner.github_username,
-                    repository.name,
-                    branch.name,
-                    last_commit.reference,
-                ) + commit_ns.payload['commits']
+                parameters['from_commit'] = last_commit.reference
+            else:
+                parameters = {}
+            if parameters:
+                commits = get_all_commits(**parameters) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
                 continue

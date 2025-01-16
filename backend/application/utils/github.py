@@ -33,20 +33,13 @@ def build_commit_response(commit: Dict):
     }
 
 
-def get_all_commits(owner: str, repository: str, branch: str) -> List[Dict]:
-    url = f'{BASE_URL}/repos/{owner}/{repository}/commits'
-    response = get_url(url, headers=HEADERS, params={'sha': branch})
-    if response.status_code != 200:
-        raise HTTPError(f"Failed to fetch commits: {response.status_code}, {response.json()}")
-    return [build_commit_response(commit) for commit in response.json()]
-
-
-def get_commits(owner: str, repository: str, branch: str, from_commit: str, to_commit: Optional[str] = None) -> List[Dict]:
+def get_all_commits(owner: str, repository: str, branch: str, from_commit: Optional[str] = None, to_commit: Optional[str] = None) -> List[Dict]:
     url = f'{BASE_URL}/repos/{owner}/{repository}/commits'
     params = {
         'sha': branch,
-        'since': from_commit,
     }
+    if from_commit:
+        params['since'] = from_commit
     if to_commit:
         params['until'] = to_commit
     response = get_url(url, headers=HEADERS, params=params)
