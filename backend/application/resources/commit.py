@@ -108,7 +108,6 @@ class WebHook(Resource):
                     repository.name,
                     branch.name,
                     last_commit.reference,
-                    commit_ns.payload['head_commit']['id'],
                 ) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
