@@ -1,11 +1,12 @@
 import functools
 from datetime import datetime
-from typing import Optional
+from typing import Optional, List, Dict
 from application import api, config
-from application.connector import db
+from application.connector import db, check_db_session
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
 from application.utils import log_error
+from application.utils.github import get_all_branches, get_all_commits
 from flask import request, abort
 from flask_restx import Namespace, Resource
 import hmac
@@ -76,8 +77,15 @@ class WebHook(Resource):
             db.session.add(repository)
             db.session.commit()
             if config.GITHUB_TOKEN:
-                # TODO: extract all branches
-                pass
+                for branch_name in get_all_branches(owner.firstname, repository.name):
+                    if Branch.query.filter_by(name=branch_name, repository_id=repository.id).first():
+                        continue
+                    db.session.add(Branch(
+                        name=branch_name,
+                        repository_id=repository.id,
+                    ))
+                if check_db_session():
+                    db.session.commit()
         branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
         if not branch:
             branch = Branch(
@@ -87,11 +95,11 @@ class WebHook(Resource):
             db.session.add(branch)
             db.session.commit()
         partners = {}
+        commits: List[Dict] = []
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
         if last_commit and last_commit.reference != commit_ns.payload['before'] and config.GITHUB_TOKEN:
-            # TODO: extract all commits between the current last commit the received commits
-            pass
-        for commit in commit_ns.payload['commits']:
+            commits = get_all_commits(owner.name, repository.name, branch.name) + commit_ns.payload['commits']
+        for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
                 continue
             comitter_email = commit['committer']['email']
