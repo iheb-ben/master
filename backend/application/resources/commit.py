@@ -2,11 +2,11 @@ import functools
 from datetime import datetime
 from typing import Optional, List, Dict
 from application import api, config
-from application.connector import db, check_db_session
+from application.connector import db
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
 from application.utils import log_error
-from application.utils.github import get_all_branches, get_all_commits
+from application.utils.github import get_all_branches, get_all_commits, get_commits
 from flask import request, abort
 from flask_restx import Namespace, Resource
 import hmac
@@ -78,14 +78,15 @@ class WebHook(Resource):
             db.session.add(repository)
             db.session.commit()
             if config.GITHUB_TOKEN:
-                for endpoint_branch_name in get_all_branches(owner.github_username, repository.name):
+                branches_names = get_all_branches(owner.github_username, repository.name)
+                for endpoint_branch_name in branches_names:
                     if Branch.query.filter_by(name=endpoint_branch_name, repository_id=repository.id).first():
                         continue
                     db.session.add(Branch(
                         name=endpoint_branch_name,
                         repository_id=repository.id,
                     ))
-                if check_db_session():
+                if branches_names:
                     db.session.commit()
         branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
         if not branch:
@@ -98,8 +99,17 @@ class WebHook(Resource):
         partners = {}
         commits: List[Dict] = []
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
-        if (not last_commit or last_commit.reference != commit_ns.payload['before']) and config.GITHUB_TOKEN:
-            commits = get_all_commits(owner.github_username, repository.name, branch.name) + commit_ns.payload['commits']
+        if config.GITHUB_TOKEN:
+            if not last_commit:
+                commits = get_all_commits(owner.github_username, repository.name, branch.name) + commit_ns.payload['commits']
+            elif last_commit.reference != commit_ns.payload['before']:
+                commits = get_commits(
+                    owner.github_username,
+                    repository.name,
+                    branch.name,
+                    last_commit.reference,
+                    commit_ns.payload['before'],
+                ) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
                 continue
@@ -118,5 +128,5 @@ class WebHook(Resource):
                 partner_id=committer.id,
                 branch_id=branch.id,
             ))
-        if check_db_session():
+        if commits:
             db.session.commit()
