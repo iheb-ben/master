@@ -15,7 +15,7 @@ class Partner(BaseModel):
     email = db.Column(db.String(255), unique=True, nullable=False)
     phone_number = db.Column(db.String(30), nullable=True)
     avatar_url = db.Column(db.String(255), nullable=True)
-    github_username = db.Column(db.Integer, unique=True, nullable=True)
+    github_username = db.Column(db.String(255), unique=True, nullable=True)
     github_id = db.Column(db.Integer, unique=True, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), unique=True, nullable=True)
     user = db.relationship('User', back_populates='partner')
