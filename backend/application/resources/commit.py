@@ -2,7 +2,7 @@ import functools
 from datetime import datetime
 from typing import Optional, List, Dict
 from application import api, config
-from application.connector import db
+from application.connector import db, check_db_session
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
 from application.utils import log_error
@@ -86,7 +86,7 @@ class WebHook(Resource):
                         name=endpoint_branch_name,
                         repository_id=repository.id,
                     ))
-                if branches_names:
+                if check_db_session():
                     db.session.commit()
         branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
         if not branch:
@@ -105,13 +105,7 @@ class WebHook(Resource):
                 'repository': repository.name,
                 'branch': branch.name,
             }
-            if not last_commit:
-                pass
-            elif last_commit.reference != commit_ns.payload['before']:
-                parameters['from_commit'] = last_commit.reference
-            else:
-                parameters = {}
-            if parameters:
+            if not last_commit or last_commit.reference != commit_ns.payload['before']:
                 commits = get_all_commits(**parameters)
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
