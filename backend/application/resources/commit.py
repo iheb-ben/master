@@ -97,7 +97,7 @@ class WebHook(Resource):
         partners = {}
         commits: List[Dict] = []
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
-        if last_commit and last_commit.reference != commit_ns.payload['before'] and config.GITHUB_TOKEN:
+        if (not last_commit or last_commit.reference != commit_ns.payload['before']) and config.GITHUB_TOKEN:
             commits = get_all_commits(owner.name, repository.name, branch.name) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
