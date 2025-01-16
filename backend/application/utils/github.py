@@ -28,9 +28,9 @@ def get_all_commits(owner: str, repository: str, branch: str) -> List[Dict]:
         'id': commit['sha'],
         'message': commit['commit']['message'],
         'committer': {
-            'id': commit['committer']['id'],
-            'name': commit['committer']['name'],
-            'email': commit['committer']['email'],
+            'name': commit['commit']['committer']['name'],
+            'email': commit['commit']['committer']['email'],
+            'username': commit['committer']['login'],
         },
         'timestamp': commit['commit']['author']['date'],
     } for commit in commits]
