@@ -19,11 +19,19 @@ class BaseModel(db.Model):
                 target.create_date = datetime.utcnow()
             if not target.create_uid:
                 target.create_uid = current_user_id()
+            if hasattr(cls, 'compute_fields'):
+                cls.compute_fields(target)
+            if hasattr(cls, 'before_insert'):
+                cls.before_insert(target)
 
         @db.event.listens_for(cls, 'before_update')
         def set_write_metadata(mapper, connection, target):
             target.write_date = datetime.utcnow()
             target.write_uid = current_user_id()
+            if hasattr(cls, 'compute_fields'):
+                cls.compute_fields(target)
+            if hasattr(cls, 'before_update'):
+                cls.before_update(target)
 
 
 from . import user

@@ -42,10 +42,10 @@ def github_webhook_wrapper(func):
 commit_ns: Namespace = api.namespace(name='Commits', path='/commits', description='Commit management operations')
 
 
-def find_or_create_partner(email: str, name: str) -> Partner:
+def find_or_create_partner(email: str, name: str, username: str) -> Partner:
     partner: Optional[Partner] = Partner.query.filter_by(email=email).first()
     if not partner:
-        partner = Partner(email=email, firstname=name)
+        partner = Partner(email=email, firstname=name, github_username=username)
         db.session.add(partner)
         db.session.commit()
     return partner
@@ -61,8 +61,9 @@ class WebHook(Resource):
         if not owner:
             owner = Partner(
                 firstname=commit_ns.payload['repository']['owner']['name'],
-                email=commit_ns.payload['repository']['owner']['email'],
+                github_username=commit_ns.payload['repository']['owner']['login'],
                 github_id=commit_ns.payload['repository']['owner']['id'],
+                email=commit_ns.payload['repository']['owner']['email'],
             )
             db.session.add(owner)
             db.session.commit()
@@ -77,7 +78,7 @@ class WebHook(Resource):
             db.session.add(repository)
             db.session.commit()
             if config.GITHUB_TOKEN:
-                for branch_name in get_all_branches(owner.firstname, repository.name):
+                for branch_name in get_all_branches(owner.github_username, repository.name):
                     if Branch.query.filter_by(name=branch_name, repository_id=repository.id).first():
                         continue
                     db.session.add(Branch(
@@ -98,7 +99,7 @@ class WebHook(Resource):
         commits: List[Dict] = []
         last_commit: Optional[Commit] = Commit.query.filter_by(branch_id=branch.id).order_by(db.desc(Commit.timestamp)).first()
         if (not last_commit or last_commit.reference != commit_ns.payload['before']) and config.GITHUB_TOKEN:
-            commits = get_all_commits(owner.name, repository.name, branch.name) + commit_ns.payload['commits']
+            commits = get_all_commits(owner.github_username, repository.name, branch.name) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
                 continue
@@ -107,6 +108,7 @@ class WebHook(Resource):
             if not committer:
                 partners[comitter_email] = committer = find_or_create_partner(
                     name=commit['committer']['name'],
+                    username=commit['committer']['username'],
                     email=comitter_email,
                 )
             db.session.add(Commit(
