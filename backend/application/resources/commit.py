@@ -102,13 +102,13 @@ class WebHook(Resource):
         if config.GITHUB_TOKEN:
             if not last_commit:
                 commits = get_all_commits(owner.github_username, repository.name, branch.name) + commit_ns.payload['commits']
-            elif last_commit.reference != commit_ns.payload['before']:
+            elif last_commit.reference != commit_ns.payload['head_commit']['id']:
                 commits = get_commits(
                     owner.github_username,
                     repository.name,
                     branch.name,
                     last_commit.reference,
-                    commit_ns.payload['before'],
+                    commit_ns.payload['head_commit']['id'],
                 ) + commit_ns.payload['commits']
         for commit in commits:
             if Commit.query.filter_by(reference=commit['id']).first():
