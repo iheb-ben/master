@@ -24,10 +24,9 @@ def get_all_commits(owner: str, repository: str, branch: str) -> List[Dict]:
     if response.status_code != 200:
         raise HTTPError(f"Failed to fetch commits: {response.status_code}, {response.json()}")
     commits = response.json()
-
     return [{
-        'id': commit['id'],
+        'id': commit['sha'],
         'message': commit['commit']['message'],
-        'committer': commit['commit']['author'],
+        'committer': commit['committer'],
         'timestamp': commit['commit']['author']['date'],
     } for commit in commits]
