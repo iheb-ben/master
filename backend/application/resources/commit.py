@@ -13,9 +13,9 @@ import hashlib
 
 
 def verify_github_signature(payload, signature) -> bool:
-    if not config.GITHUB_KEY:
+    if not config.GITHUB_SECRET:
         return True
-    expected_signature = f'sha256={hmac.new(config.GITHUB_KEY.encode(), payload, hashlib.sha256).hexdigest()}'
+    expected_signature = f'sha256={hmac.new(config.GITHUB_SECRET.encode(), payload, hashlib.sha256).hexdigest()}'
     return hmac.compare_digest(expected_signature, signature)
 
 
@@ -41,7 +41,7 @@ def github_webhook_wrapper(func):
 commit_ns: Namespace = api.namespace(name='Commits', path='/commits', description='Commit management operations')
 
 
-def find_partner(email: str, name: str) -> Partner:
+def find_or_create_partner(email: str, name: str) -> Partner:
     partner: Optional[Partner] = Partner.query.filter_by(email=email).first()
     if not partner:
         partner = Partner(email=email, firstname=name)
@@ -75,31 +75,25 @@ class WebHook(Resource):
             )
             db.session.add(repository)
             db.session.commit()
+        branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
+        if not branch:
             branch = Branch(
                 name=branch_name,
-                head_commit_id=commit_ns.payload['head_commit']['id'],
                 repository_id=repository.id,
             )
             db.session.add(branch)
-            db.session.commit()
-        else:
-            branch: Optional[Branch] = Branch.query.filter_by(name=branch_name, repository_id=repository.id).first()
-            if not branch:
-                branch = Branch(
-                    name=branch_name,
-                    head_commit_id=commit_ns.payload['head_commit']['id'],
-                    repository_id=repository.id,
-                )
-                db.session.add(branch)
-            else:
-                branch.head_commit_id = commit_ns.payload['head_commit']['id']
-            db.session.commit()
+        db.session.commit()
         partners = {}
+        if branch.head_commit_id and branch.head_commit_id != commit_ns.payload['before'] and config.GITHUB_TOKEN:
+            # TODO: extract previous commits and store them in db
+            pass
         for commit in commit_ns.payload['commits']:
+            if Commit.query.filter_by(reference=commit['id']).first():
+                continue
             comitter_email = commit['committer']['email']
             committer = partners.get(comitter_email)
             if not committer:
-                partners[comitter_email] = committer = find_partner(
+                partners[comitter_email] = committer = find_or_create_partner(
                     name=commit['committer']['name'],
                     email=comitter_email,
                 )
@@ -110,4 +104,5 @@ class WebHook(Resource):
                 partner_id=committer.id,
                 branch_id=branch.id,
             ))
+            branch.head_commit_id = commit['id']
             db.session.commit()
