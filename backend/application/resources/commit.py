@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 from functools import wraps
 from os import makedirs
 from pathlib import Path
@@ -123,7 +123,7 @@ class WebHook(Resource):
                 'owner': owner.github_username,
                 'repository': repository.name,
                 'branch': branch.name,
-                'from_date': last_commit and last_commit.timestamp or None,
+                'from_date': last_commit and (last_commit.timestamp - timedelta(hours=5)) or None,
             }
             if not last_commit or last_commit.reference != commit_ns.payload['before']:
                 commits = get_all_commits(**parameters)
