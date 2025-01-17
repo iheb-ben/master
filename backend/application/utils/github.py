@@ -16,12 +16,12 @@ def get_all_branches(owner: str, repository: str) -> List[str]:
     url = f'{BASE_URL}/repos/{owner}/{repository}/branches'
     response = get_url(url, headers=HEADERS)
     if response.status_code != 200:
-        raise HTTPError(f'Failed to fetch branches: {response.status_code}, {response.json()}')
+        raise HTTPError(f'[Github API] Failed to fetch branches: {response.status_code}, {response.json()}')
     branches = response.json()
     return [branch['name'] for branch in branches]
 
 
-def build_commit_response(commit: Dict):
+def _build_commit_response(commit: Dict):
     timestamp = datetime.strptime(commit['commit']['committer']['date'], DATE_FORMAT)
     return {
         'id': commit['sha'],
@@ -46,5 +46,5 @@ def get_all_commits(owner: str, repository: str, branch: str, from_date: Optiona
         params['until'] = to_date.strftime(DATE_FORMAT)
     response = get_url(url, headers=HEADERS, params=params)
     if response.status_code != 200:
-        raise HTTPError(f"Failed to fetch commits: {response.status_code}, {response.json()}")
-    return [build_commit_response(commit) for commit in response.json()]
+        raise HTTPError(f"[Github API] Failed to fetch commits: {response.status_code}, {response.json()}")
+    return [_build_commit_response(commit) for commit in response.json()]
