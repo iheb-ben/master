@@ -3,6 +3,7 @@ from application import config
 from typing import List, Dict, Optional
 from requests import HTTPError, get as get_url
 
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 BASE_URL = 'https://api.github.com'
 HEADERS = {
     'Authorization': f'Bearer {config.GITHUB_TOKEN}',
@@ -18,9 +19,6 @@ def get_all_branches(owner: str, repository: str) -> List[str]:
         raise HTTPError(f'Failed to fetch branches: {response.status_code}, {response.json()}')
     branches = response.json()
     return [branch['name'] for branch in branches]
-
-
-DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
 
 
 def build_commit_response(commit: Dict):
@@ -43,9 +41,9 @@ def get_all_commits(owner: str, repository: str, branch: str, from_date: Optiona
         'sha': branch,
     }
     if from_date:
-        params['since'] = from_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        params['since'] = from_date.strftime(DATE_FORMAT)
     if to_date:
-        params['until'] = to_date.strftime('%Y-%m-%dT%H:%M:%SZ')
+        params['until'] = to_date.strftime(DATE_FORMAT)
     response = get_url(url, headers=HEADERS, params=params)
     if response.status_code != 200:
         raise HTTPError(f"Failed to fetch commits: {response.status_code}, {response.json()}")
