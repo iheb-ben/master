@@ -37,8 +37,7 @@ def github_webhook_wrapper(func):
         event_type = request.headers.get('X-Github-Event', 'ping')
         if event_type == 'ping':
             return {'message': 'pong'}, 200
-        func(*args, **kwargs)
-        return {'message': 'Event processed'}, 200
+        return func(*args, **kwargs)
     return wrapper
 
 
@@ -67,7 +66,7 @@ def log_json_error(func: Callable):
             with open(file_name, 'w') as json_file:
                 json.dump(commit_ns.payload, json_file, indent=4)
             current_app.logger.error(f'[webhook payload stored in: {file_name}], {e}', exc_info=True)
-            raise e
+            return {'message': 'Event failed'}, 500
     return wrapper
 
 
@@ -76,7 +75,7 @@ def log_json_error(func: Callable):
 class WebHook(Resource):
     @github_webhook_wrapper
     @log_json_error
-    def post(self) -> None:
+    def post(self):
         owner: Optional[Partner] = Partner.query.filter_by(github_id=commit_ns.payload['repository']['owner']['id']).first()
         if not owner:
             owner = Partner(
@@ -146,3 +145,4 @@ class WebHook(Resource):
                 branch_id=branch.id,
             ))
             db.session.commit()
+        return {'message': 'Event processed'}, 200
