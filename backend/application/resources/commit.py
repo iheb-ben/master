@@ -123,8 +123,7 @@ class WebHook(Resource):
                 'owner': owner.github_username,
                 'repository': repository.name,
                 'branch': branch.name,
-                'from_commit': last_commit and last_commit.reference or None,
-                'to_commit': commit_ns.payload['after'],
+                'from_date': last_commit and last_commit.timestamp or None,
             }
             if not last_commit or last_commit.reference != commit_ns.payload['before']:
                 commits = get_all_commits(**parameters)
