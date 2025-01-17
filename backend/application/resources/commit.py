@@ -1,4 +1,3 @@
-import functools
 from datetime import datetime
 from functools import wraps
 from os import makedirs
@@ -25,7 +24,7 @@ def verify_github_signature(payload, signature) -> bool:
 
 
 def github_webhook_wrapper(func):
-    @functools.wraps(func)
+    @wraps(func)
     def wrapper(*args, **kwargs):
         user_agent = request.headers.get('User-Agent', '')
         if not user_agent.startswith('GitHub-Hookshot/'):
@@ -61,12 +60,13 @@ def log_json_error(func: Callable):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            file_name = Path(config.LOG_FOLDER) / f'webhook/payload_{uuid1()}.json'
+            file_name = Path(config.LOG_FOLDER) / f'webhook/{uuid1()}.json'
+            file_name = file_name.absolute().resolve()
             if not file_name.parent.is_dir():
                 makedirs(file_name.parent, exist_ok=True)
             with open(file_name, 'w') as json_file:
                 json.dump(commit_ns.payload, json_file, indent=4)
-            current_app.logger.error(f'[response in file: {file_name}], {e}', exc_info=True)
+            current_app.logger.error(f'[webhook payload stored in: {file_name}], {e}', exc_info=True)
             raise e
     return wrapper
 
@@ -127,23 +127,22 @@ class WebHook(Resource):
             }
             if not last_commit or last_commit.reference != commit_ns.payload['before']:
                 commits = get_all_commits(**parameters)
-        raise Exception('etest')
-        # for commit in commits:
-        #     if Commit.query.filter_by(reference=commit['id']).first():
-        #         continue
-        #     comitter_email = commit['committer']['email']
-        #     committer = partners.get(comitter_email)
-        #     if not committer:
-        #         partners[comitter_email] = committer = find_or_create_partner(
-        #             name=commit['committer']['name'],
-        #             username=commit['committer']['username'],
-        #             email=comitter_email,
-        #         )
-        #     db.session.add(Commit(
-        #         reference=commit['id'],
-        #         name=commit['message'],
-        #         timestamp=datetime.fromisoformat(commit['timestamp']),
-        #         partner_id=committer.id,
-        #         branch_id=branch.id,
-        #     ))
-        #     db.session.commit()
+        for commit in commits:
+            if Commit.query.filter_by(reference=commit['id']).first():
+                continue
+            comitter_email = commit['committer']['email']
+            committer = partners.get(comitter_email)
+            if not committer:
+                partners[comitter_email] = committer = find_or_create_partner(
+                    name=commit['committer']['name'],
+                    username=commit['committer']['username'],
+                    email=comitter_email,
+                )
+            db.session.add(Commit(
+                reference=commit['id'],
+                name=commit['message'],
+                timestamp=datetime.fromisoformat(commit['timestamp']),
+                partner_id=committer.id,
+                branch_id=branch.id,
+            ))
+            db.session.commit()
