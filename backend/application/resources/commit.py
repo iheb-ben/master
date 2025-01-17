@@ -64,7 +64,7 @@ def log_json_error(func: Callable):
             if not file_name.parent.is_dir():
                 makedirs(file_name.parent, exist_ok=True)
             with open(file_name, 'w') as json_file:
-                json.dump(commit_ns.payload, json_file, indent=4)
+                json.dump(commit_ns.payload, json_file, indent=2)
             current_app.logger.error(f'[webhook payload stored in: "{file_name}"], {e}', exc_info=True)
             return {'message': 'Event failed'}, 500
     return wrapper
