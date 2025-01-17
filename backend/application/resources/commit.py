@@ -61,11 +61,12 @@ def log_json_error(func: Callable):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            json_file = Path(config.LOG_FOLDER) / f'webhook/payload_{uuid1()}.json'
-            if not json_file.parent.is_dir():
-                makedirs(json_file.parent, exist_ok=True)
-            json.dump(open(json_file, 'w+'), commit_ns.payload)
-            current_app.logger.error(f'[response in file: {json_file}], {e}', exc_info=True)
+            file_name = Path(config.LOG_FOLDER) / f'webhook/payload_{uuid1()}.json'
+            if not file_name.parent.is_dir():
+                makedirs(file_name.parent, exist_ok=True)
+            with open(file_name, 'w') as json_file:
+                json.dump(commit_ns.payload, json_file, indent=4)
+            current_app.logger.error(f'[response in file: {file_name}], {e}', exc_info=True)
             raise e
     return wrapper
 
