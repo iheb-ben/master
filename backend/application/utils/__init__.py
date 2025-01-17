@@ -63,6 +63,7 @@ def with_access(namespace: Namespace, access_rights=None):
 
 
 def log_error(func: Callable):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         try:
             return func(*args, **kwargs)

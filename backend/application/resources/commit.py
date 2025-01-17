@@ -1,15 +1,19 @@
 import functools
 from datetime import datetime
-from typing import Optional, List, Dict
+from functools import wraps
+from os import makedirs
+from pathlib import Path
+from typing import Optional, List, Dict, Callable
+from uuid import uuid1
 from application import api, config
 from application.connector import db, check_db_session
 from application.models.user import Partner
 from application.models.commit import Commit, Repository, Branch
-from application.utils import log_error
 from application.utils.github import get_all_branches, get_all_commits
-from flask import request, abort
+from flask import request, abort, current_app
 from flask_restx import Namespace, Resource
 import hmac
+import json
 import hashlib
 
 
@@ -51,11 +55,26 @@ def find_or_create_partner(email: str, name: str, username: str) -> Partner:
     return partner
 
 
+def log_json_error(func: Callable):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except Exception as e:
+            json_file = Path(config.LOG_FOLDER) / f'webhook/payload_{uuid1()}.json'
+            if not json_file.parent.is_dir():
+                makedirs(json_file.parent, exist_ok=True)
+            json.dump(open(json_file, 'w+'), commit_ns.payload)
+            current_app.logger.error(f'[response in file: {json_file}], {e}', exc_info=True)
+            raise e
+    return wrapper
+
+
 # noinspection PyMethodMayBeStatic
 @commit_ns.route('/webhook')
 class WebHook(Resource):
     @github_webhook_wrapper
-    @log_error
+    @log_json_error
     def post(self) -> None:
         owner: Optional[Partner] = Partner.query.filter_by(github_id=commit_ns.payload['repository']['owner']['id']).first()
         if not owner:
@@ -107,22 +126,23 @@ class WebHook(Resource):
             }
             if not last_commit or last_commit.reference != commit_ns.payload['before']:
                 commits = get_all_commits(**parameters)
-        for commit in commits:
-            if Commit.query.filter_by(reference=commit['id']).first():
-                continue
-            comitter_email = commit['committer']['email']
-            committer = partners.get(comitter_email)
-            if not committer:
-                partners[comitter_email] = committer = find_or_create_partner(
-                    name=commit['committer']['name'],
-                    username=commit['committer']['username'],
-                    email=comitter_email,
-                )
-            db.session.add(Commit(
-                reference=commit['id'],
-                name=commit['message'],
-                timestamp=datetime.fromisoformat(commit['timestamp']),
-                partner_id=committer.id,
-                branch_id=branch.id,
-            ))
-            db.session.commit()
+        raise Exception('etest')
+        # for commit in commits:
+        #     if Commit.query.filter_by(reference=commit['id']).first():
+        #         continue
+        #     comitter_email = commit['committer']['email']
+        #     committer = partners.get(comitter_email)
+        #     if not committer:
+        #         partners[comitter_email] = committer = find_or_create_partner(
+        #             name=commit['committer']['name'],
+        #             username=commit['committer']['username'],
+        #             email=comitter_email,
+        #         )
+        #     db.session.add(Commit(
+        #         reference=commit['id'],
+        #         name=commit['message'],
+        #         timestamp=datetime.fromisoformat(commit['timestamp']),
+        #         partner_id=committer.id,
+        #         branch_id=branch.id,
+        #     ))
+        #     db.session.commit()
