@@ -130,7 +130,7 @@ class WebHook(Resource):
                 commits = get_all_commits(**parameters)
         existing_references = {commit.reference for commit in Commit.query.filter(Commit.reference.in_([commit['id'] for commit in commits])).all()}
         for commit in commits:
-            if commit['id'] not in existing_references:
+            if commit['id'] in existing_references:
                 continue
             comitter_email = commit['committer']['email']
             committer = partners.get(comitter_email)
