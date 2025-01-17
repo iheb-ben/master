@@ -20,8 +20,11 @@ def get_all_branches(owner: str, repository: str) -> List[str]:
     return [branch['name'] for branch in branches]
 
 
+DATE_FORMAT = '%Y-%m-%dT%H:%M:%SZ'
+
+
 def build_commit_response(commit: Dict):
-    timestamp = datetime.strptime(commit['commit']['committer']['date'], '%Y-%m-%dT%H:%M:%SZ')
+    timestamp = datetime.strptime(commit['commit']['committer']['date'], DATE_FORMAT)
     return {
         'id': commit['sha'],
         'message': commit['commit']['message'],
