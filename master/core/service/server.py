@@ -12,13 +12,14 @@ from master.core.module import modules_paths, attach_order, select_addons
 
 
 class Application:
-    __slots__ = ('paths', 'pool', 'installed', 'to_update')
+    __slots__ = ('paths', 'pool', 'registry', 'installed', 'to_update')
     reload_event = Event()
     stop_event = Event()
 
     def __init__(self, pool: PoolManager):
         self.pool = pool
         self.paths = {}
+        self.registry = {}
         self.installed = []
         self.to_update = []
         atexit.register(self.shutdown)
@@ -40,6 +41,7 @@ class Application:
         httprequest = wrappers.Request(werkzeug_environ)
         request = Request(httprequest, self)
         with request.create_environment() as env:
+            request.env = env
             response = wrappers.Response('Hello world!' + repr(env))
             return response(werkzeug_environ, start_response)
 

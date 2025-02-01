@@ -1,13 +1,10 @@
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Type, Optional, List, Dict, Callable
+from typing import Any, Type, Optional, List, Dict, Callable, Generator
 from werkzeug.wrappers import Request as _Request
-from werkzeug.local import LocalStack, LocalProxy
-from master.core.api import Environment
+from master.core.api import Environment, request
+from master.core.database.cursor import Cursor
 from master.core.tools import filter_class, is_valid_name
-
-_request_stack = LocalStack()
-request = LocalProxy(lambda: _request_stack.top)
 
 
 class Request:
@@ -16,18 +13,32 @@ class Request:
             new_request = request
         else:
             new_request = super().__new__(cls)
-            _request_stack.push(new_request)
+            Environment.push_request(new_request)
         return new_request
 
     def __init__(self, httprequest: _Request, application: Any):
         self.httprequest = httprequest
         self.application = application
+        self.cursor: Optional[Cursor] = None
+        self.env: Optional[Environment] = None
 
     @contextmanager
-    def create_environment(self):
-        with self.application.pool.get_cursor() as cursor:
-            with cursor.with_savepoint():
-                yield Environment(cursor, None, {})
+    def _build_savepoint(self):
+        with self.cursor.with_savepoint():
+            env = Environment(self.cursor, self.application.registry, {})
+            yield env
+            env.flush()
+
+    @contextmanager
+    def create_environment(self) -> Generator[Environment, None, None]:
+        if self.cursor:
+            with self._build_savepoint() as env:
+                yield env
+        else:
+            with self.application.pool.get_cursor() as cursor:
+                self.cursor = cursor
+                with self._build_savepoint() as env:
+                    yield env
 
     def __repr__(self):
         return repr(self.httprequest)

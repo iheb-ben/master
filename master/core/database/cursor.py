@@ -11,8 +11,12 @@ class Cursor:
     def __init__(self, cursor: _BaseCursor):
         self._cursor = cursor
         self._savepoints: List[str] = []
+        self._begin = False
 
     def create_savepoint(self, name: Optional[str] = None) -> str:
+        if not self._begin:
+            self.execute(sql='BEGIN')
+            self._begin = True
         name = name or str(uuid4())
         self._savepoints.append(name)
         self.execute(sql=f'SAVEPOINT "{name}"')
@@ -28,10 +32,17 @@ class Cursor:
         if name in self._savepoints:
             self.execute(sql=f'RELEASE SAVEPOINT "{name}"')
             self._savepoints.remove(name)
+        if self._begin and not self._savepoints:
+            self.execute(sql='END')
+
+    def release_all_savepoints(self, stop_at: Optional[str] = None):
+        for name in self._savepoints.copy():
+            self.release_savepoint(name)
+            if name is stop_at:
+                break
 
     @contextmanager
     def with_savepoint(self) -> Generator[str, None, None]:
-        self.execute(sql='BEGIN')
         name = self.create_savepoint()
         try:
             yield name
@@ -40,7 +51,6 @@ class Cursor:
             raise
         finally:
             self.release_savepoint(name)
-            self.execute(sql='END')
 
     @property
     def current_savepoint(self):
