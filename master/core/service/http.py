@@ -8,6 +8,8 @@ from master.core.tools import filter_class, is_valid_name
 
 
 class Request:
+    __slots__ = ('httprequest', 'application', 'env')
+
     def __new__(cls, *args, **kwargs):
         if request:
             new_request = request
@@ -19,26 +21,16 @@ class Request:
     def __init__(self, httprequest: _Request, application: Any):
         self.httprequest = httprequest
         self.application = application
-        self.cursor: Optional[Cursor] = None
         self.env: Optional[Environment] = None
 
     @contextmanager
-    def _build_savepoint(self):
-        with self.cursor.with_savepoint():
-            env = Environment(self.cursor, self.application.registry, {})
-            yield env
-            env.flush()
-
-    @contextmanager
-    def create_environment(self) -> Generator[Environment, None, None]:
-        if self.cursor:
-            with self._build_savepoint() as env:
-                yield env
-        else:
-            with self.application.pool.get_cursor() as cursor:
-                self.cursor = cursor
-                with self._build_savepoint() as env:
-                    yield env
+    def create_environment(self, **kwargs) -> Generator[Environment, None, None]:
+        with self.application.pool.get_cursor() as cursor:
+            if self.env:
+                kwargs.setdefault('context', self.env.context)
+                kwargs.setdefault('sudo', self.env.is_sudo())
+                kwargs.setdefault('uid', self.env.user.id)
+            yield Environment(cursor, self.application.registry, **kwargs)
 
     def __repr__(self):
         return repr(self.httprequest)

@@ -35,12 +35,6 @@ class Cursor:
         if self._begin and not self._savepoints:
             self.execute(sql='END')
 
-    def release_all_savepoints(self, stop_at: Optional[str] = None):
-        for name in self._savepoints.copy():
-            self.release_savepoint(name)
-            if name is stop_at:
-                break
-
     @contextmanager
     def with_savepoint(self) -> Generator[str, None, None]:
         name = self.create_savepoint()

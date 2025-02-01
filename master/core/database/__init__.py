@@ -2,8 +2,12 @@ from typing import Optional
 from psycopg2.sql import Identifier, SQL
 from . import cursor
 from . import connector
-from ..tools.config import environ
-from ..tools.sql import check_db_name
+from master.core.tools.config import environ
+from master.core.tools.sql import check_db_name
+
+BOT_ID = 1
+PUBLIC_USER_ID = 2
+SUPER_USER_ID = 3
 
 
 def create_empty_database(db_name: str):
