@@ -1,9 +1,7 @@
-try:
-    import master
-except KeyboardInterrupt:
-    master = None
-
+import master
 
 if __name__ == '__main__':
-    if master:
+    try:
         master.main()
+    except KeyboardInterrupt:
+        pass

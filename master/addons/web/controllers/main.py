@@ -1,13 +1,7 @@
 from master.core.service.http import route, Controller
 
 
-class MainA(Controller):
-    @route('/')
-    def test(self):
-        return 'test'
-
-
-class MainB(MainA):
+class MainC(Controller):
     @route('/')
     def test(self):
         return 'test'
