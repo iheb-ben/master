@@ -49,7 +49,7 @@ def build_controller_class(installed: List[str]):
         current_list.extend(Controller.__children__[addon])
     if not current_list:
         return Controller
-    return type('MetaController', tuple(filter_class(current_list)), {})
+    return type('MetaController', tuple(filter_class(current_list)), {'__ignore__': True})
 
 
 class Controller:
@@ -63,7 +63,10 @@ class Controller:
             raise ValueError('''Check if a string adheres to the following rules:\n
 1. Can start with _ or an uppercase letter (A-Z).\n
 2. Contains only letters (A-Z, a-z).''')
-        cls.__children__[cls.__module__.split('.')[2]].append(cls)
+        if not cls.__module__.startswith('master.addons.') and cls.__name__ != 'MetaController':
+            raise ValueError('Current controller is not part of the master addons package')
+        if not getattr(cls, '__ignore__', False):
+            cls.__children__[cls.__module__.split('.')[2]].append(cls)
 
     def __new__(cls, *args, **kwargs):
         return cls.__object__ or super().__new__(cls)
