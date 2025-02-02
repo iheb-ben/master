@@ -11,7 +11,7 @@ class Main(Controller):
     def dispatch(self):
         adapter = Map(
             rules=self.url_map(),
-            converters=self.__converters__,
+            converters=self.get_converters(),
         ).bind_to_environ(environ=request.httprequest.environ)
         try:
             details: Tuple[Rule, Dict[str, Any]] = adapter.match(return_rule=True)
@@ -38,6 +38,9 @@ class Main(Controller):
                     'error': error,
                 })
             raise error
+
+    def get_converters(self):
+        return self.__converters__
 
     def url_map(self):
         current_list = []
