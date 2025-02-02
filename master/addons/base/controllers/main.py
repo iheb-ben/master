@@ -1,4 +1,5 @@
 import traceback
+from typing import Any, Dict, Tuple
 from werkzeug import wrappers
 from werkzeug.exceptions import NotFound, HTTPException
 from werkzeug.routing import Map, Rule
@@ -13,7 +14,8 @@ class Main(Controller):
             converters=self.__converters__,
         ).bind_to_environ(environ=request.httprequest.environ)
         try:
-            rule, kwargs = adapter.match(return_rule=True)
+            details: Tuple[Rule, Dict[str, Any]] = adapter.match(return_rule=True)
+            rule, kwargs = details
             if not rule.endpoint:
                 raise NotFound()
             if isinstance(rule.endpoint, tuple):
@@ -23,7 +25,10 @@ class Main(Controller):
                     with request.env.cursor.with_savepoint():
                         return controller_func(**kwargs)
                 return controller_func(**kwargs)
-            return Endpoint.wrap(rule.endpoint)()
+            elif callable(rule.endpoint):
+                return Endpoint.wrap(rule.endpoint)()
+            else:
+                raise RuntimeError('Weird endpoint definition')
         except Exception as error:
             if request.httprequest.method == 'GET':
                 status_code = 500
