@@ -2,9 +2,9 @@ from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Type, Optional, List, Dict, Callable, Generator
 from werkzeug.wrappers import Request as _Request
-from master.core.api import Environment, request
+from master.core.api import Environment, request, Component
 from master.core.database.cursor import Cursor
-from master.core.tools import filter_class, is_valid_name
+from master.core.tools import filter_class
 
 
 class Request:
@@ -49,24 +49,22 @@ def build_controller_class(installed: List[str]):
         current_list.extend(Controller.__children__[addon])
     if not current_list:
         return Controller
-    return type('MetaController', tuple(filter_class(current_list)), {})
+    return type('_Controller', tuple(filter_class(current_list)), {})
 
 
-class Controller:
-    __children__: Dict[str, List[Type]] = defaultdict(list)
+class Controller(Component):
     __object__: Optional[Type] = None
+    __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, List[Endpoint]] = defaultdict(list)
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        if not is_valid_name(cls.__name__):
-            raise ValueError('''Check if a string adheres to the following rules:\n
-1. Can start with _ or an uppercase letter (A-Z).\n
-2. Contains only letters (A-Z, a-z).''')
-        if not cls.__module__.startswith('master.addons.') and cls.__name__ != 'MetaController':
+        # noinspection PyTypeChecker
+        current_addon: Optional[str] = cls.__addon__
+        if not current_addon and cls.__name__ != '_Controller':
             raise ValueError('Current controller is not part of the master addons package')
-        if cls.__module__.startswith('master.addons.'):
-            cls.__children__[cls.__module__.split('.')[2]].append(cls)
+        if current_addon:
+            cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
         return cls.__object__ or super().__new__(cls)

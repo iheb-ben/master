@@ -1,12 +1,31 @@
 import copy
+from functools import cached_property
 from typing import Any, Dict, Optional
 from werkzeug.local import LocalStack, LocalProxy
 from master.core.database import PUBLIC_USER_ID
 from master.core.database.cursor import Cursor
+from master.core.tools import is_valid_name
 
 _request_stack = LocalStack()
 request = LocalProxy(lambda: _request_stack.top)
 Context = Dict[str, Any]
+
+
+class Component:
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if not is_valid_name(cls.__name__):
+            raise ValueError("""Check if a string adheres to the following rules:\n
+1. Can start with _ or an uppercase letter (A-Z).\n
+2. Contains only letters (A-Z, a-z).""")
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def __addon__(cls):
+        if cls.__module__.startswith('master.addons.'):
+            return cls.__module__.split('.')[2]
+        return None
 
 
 class Environment:
@@ -25,6 +44,7 @@ class Environment:
         _request_stack.push(new_request)
 
     @property
+    @cached_property
     def user(self):
         return self.sudo()['res.users'].browse(self._uid)
 
@@ -32,6 +52,9 @@ class Environment:
         for key, item in copy.deepcopy(self.context).items():
             kwargs.setdefault(key, item)
         return self.__class__(self.cursor, self.registry, kwargs, self._sudo, self._uid)
+
+    def with_user(self, uid: int):
+        return self.__class__(self.cursor, self.registry, self.context, self._sudo, uid)
 
     def sudo(self):
         return self.__class__(self.cursor, self.registry, self.context, True, self._uid)
