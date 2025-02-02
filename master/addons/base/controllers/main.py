@@ -27,7 +27,7 @@ class Main(Controller):
         except Exception as error:
             if request.httprequest.method == 'GET':
                 status_code = 500
-                if isinstance(error, HTTPException):
+                if isinstance(error, HTTPException) or hasattr(error, 'code'):
                     status_code = error.code
                 return Response(template=f'base.page_{status_code}', status=status_code, context={
                     'error': error,

@@ -43,7 +43,7 @@ class Application:
         with request.create_environment() as erp_environ:
             request.env = erp_environ
             closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
-            env.flush()
+            erp_environ.flush()
             return closing_iterator
 
 
