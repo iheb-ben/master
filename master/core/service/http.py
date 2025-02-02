@@ -48,7 +48,7 @@ def build_controller_class(installed: List[str]):
     for addon in installed:
         current_list.extend(Controller.__children__[addon])
     if not current_list:
-        return Controller
+        return None
     return type('_Controller', tuple(filter_class(current_list)), {})
 
 

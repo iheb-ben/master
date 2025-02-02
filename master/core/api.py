@@ -11,6 +11,7 @@ request = LocalProxy(lambda: _request_stack.top)
 Context = Dict[str, Any]
 
 
+# noinspection PyPropertyDefinition
 class Component:
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -19,7 +20,6 @@ class Component:
 1. Can start with _ or an uppercase letter (A-Z).\n
 2. Contains only letters (A-Z, a-z).""")
 
-    # noinspection PyPropertyDefinition
     @classmethod
     @property
     def __addon__(cls):
@@ -29,7 +29,7 @@ class Component:
 
 
 class Environment:
-    __slots__ = ('registry', 'cursor', 'context', '_sudo', '_uid', '_registry_store')
+    __slots__ = ('registry', 'cursor', 'context', '_sudo', '_uid', '_store')
 
     def __init__(self, cursor: Cursor, registry: Any, context: Optional[Context] = None, sudo: bool = False, uid: Optional[int] = None):
         self.registry = registry
@@ -37,13 +37,12 @@ class Environment:
         self.context = context or {}
         self._sudo = sudo
         self._uid = uid or PUBLIC_USER_ID
-        self._registry_store = []
+        self._store = []
 
     @staticmethod
     def push_request(new_request):
         _request_stack.push(new_request)
 
-    @property
     @cached_property
     def user(self):
         return self.sudo()['res.users'].browse(self._uid)
@@ -66,5 +65,5 @@ class Environment:
         return self.registry[item](self)
 
     def flush(self):
-        while self._registry_store:
-            self.cursor.execute(self._registry_store.pop())
+        while self._store:
+            self.cursor.execute(self._store.pop(0))
