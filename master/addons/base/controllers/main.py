@@ -10,7 +10,7 @@ from master.core.service.http import route, Controller, Response, Endpoint
 class Main(Controller):
     def dispatch(self):
         adapter = Map(
-            rules=self.url_map(),
+            rules=self.get_rules(),
             converters=self.get_converters(),
         ).bind_to_environ(environ=request.httprequest.environ)
         try:
@@ -42,7 +42,7 @@ class Main(Controller):
     def get_converters(self):
         return self.__converters__
 
-    def url_map(self):
+    def get_rules(self):
         current_list = []
         for module in request.application.installed:
             for name, endpoints in self.__endpoints__.items():
