@@ -40,8 +40,8 @@ class Application:
             raise ServiceUnavailable()
         httprequest = wrappers.Request(werkzeug_environ)
         request = Request(httprequest, self)
-        with request.create_environment() as env:
-            request.env = env
+        with request.create_environment() as erp_environ:
+            request.env = erp_environ
             closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
             env.flush()
             return closing_iterator
