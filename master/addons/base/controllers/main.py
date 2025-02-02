@@ -1,5 +1,6 @@
+import traceback
 from werkzeug import wrappers
-from werkzeug.exceptions import NotFound
+from werkzeug.exceptions import NotFound, HTTPException
 from werkzeug.routing import Map, Rule
 from master.core.api import request
 from master.core.service.http import route, Controller, Response, Endpoint
@@ -7,8 +8,10 @@ from master.core.service.http import route, Controller, Response, Endpoint
 
 class Main(Controller):
     def dispatch(self):
-        mapped_urls = Map(rules=self.url_map(), converters=self.__converters__)
-        adapter = mapped_urls.bind_to_environ(request.httprequest.environ)
+        adapter = Map(
+            rules=self.url_map(),
+            converters=self.__converters__,
+        ).bind_to_environ(environ=request.httprequest.environ)
         try:
             rule, kwargs = adapter.match(return_rule=True)
             if not rule.endpoint:
@@ -23,8 +26,14 @@ class Main(Controller):
             return Endpoint.wrap(rule.endpoint)()
         except NotFound:
             if request.httprequest.method == 'GET':
-                return Response(template='base.not_found', status=404)
+                return Response(template='base.page_not_found', status=404)
             raise
+        except Exception as error:
+            if not isinstance(error, HTTPException) and request.httprequest.method == 'GET':
+                return Response(template='base.page_internal_error', status=500, context={
+                    'error': error,
+                })
+            raise error
 
     def url_map(self):
         current_list = []
