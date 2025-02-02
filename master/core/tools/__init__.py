@@ -11,6 +11,17 @@ def is_valid_name(string: str) -> bool:
     return bool(re.match(pattern, string))
 
 
+def simplify_class_name(string: str) -> str:
+    result = ''
+    for char in string:
+        if char == '_':
+            continue
+        if char.isupper():
+            result += '_'
+        result += char.lower()
+    return result
+
+
 def filter_class(class_list: List[Type]):
     valid_elements = []
     for cls in reversed(class_list):

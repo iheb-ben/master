@@ -1,10 +1,23 @@
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Type, Optional, List, Dict, Callable, Generator
-from werkzeug.wrappers import Request as _Request
+from werkzeug.routing import BaseConverter as _BaseConverter
+from werkzeug.wrappers import Request as _Request, Response as _Response
 from master.core.api import Environment, request, Component
 from master.core.database.cursor import Cursor
-from master.core.tools import filter_class
+from master.core.tools import filter_class, simplify_class_name
+
+
+class Response(_Response):
+    def __init__(self, *args, **kwargs):
+        self.template = kwargs.pop('template', None)
+        self.context = kwargs.pop('context', {})
+        super().__init__(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        if not self.data and self.status_code == 200:
+            self.status_code = 204
+        return super().__call__(*args, **kwargs)
 
 
 class Request:
@@ -37,10 +50,23 @@ class Request:
 
 
 class Endpoint:
-    def __init__(self, url: str, auth: bool, module: str):
+    def __init__(self, url: str, auth: bool, module: str, rollback: bool):
         self.module = module
         self.auth = auth
         self.url = url
+        self.rollback = rollback
+
+    @staticmethod
+    def wrap(func: Callable):
+        def _(*args, **kwargs):
+            response = func(*args, **kwargs) or Response(status=200)
+            if not isinstance(response, _Response):
+                status = 200
+                if isinstance(response, tuple):
+                    response, status = response
+                return Response(response=response, status=status)
+            return response
+        return _
 
 
 def build_controller_class(installed: List[str]):
@@ -49,13 +75,22 @@ def build_controller_class(installed: List[str]):
         current_list.extend(Controller.__children__[addon])
     if not current_list:
         return None
+    if len(current_list) == 1:
+        return current_list[0]
     return type('_Controller', tuple(filter_class(current_list)), {})
+
+
+class Converter(Component, _BaseConverter):
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        Controller.__converters__[simplify_class_name(cls.__name__)] = cls
 
 
 class Controller(Component):
     __object__: Optional[Type] = None
     __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, List[Endpoint]] = defaultdict(list)
+    __converters__: Dict[str, Type[Converter]] = {}
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -67,10 +102,15 @@ class Controller(Component):
             cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
-        return cls.__object__ or super().__new__(cls)
+        if cls.__module__.startswith('master.core.') and cls.__name__ == 'Controller' and cls.__object__:
+            return cls.__object__(*args, **kwargs)
+        return super().__new__(cls)
+
+    def dispatch(self):
+        raise NotImplemented()
 
 
-def route(*urls, auth: bool = False):
+def route(*urls, auth: bool = False, rollback: bool = True):
     def _(func: Callable):
         if not func.__module__.startswith('master.addons.'):
             raise ValueError('Current function is not part of the master addons package')
@@ -82,6 +122,7 @@ def route(*urls, auth: bool = False):
                 url=url,
                 auth=auth,
                 module=module,
+                rollback=rollback,
             ))
         return func
     return _

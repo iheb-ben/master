@@ -12,7 +12,7 @@ Context = Dict[str, Any]
 
 
 # noinspection PyPropertyDefinition
-class Component:
+class Component(object):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
         if not is_valid_name(cls.__name__):

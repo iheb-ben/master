@@ -42,8 +42,7 @@ class Application:
         request = Request(httprequest, self)
         with request.create_environment() as env:
             request.env = env
-            response = wrappers.Response('Hello world!' + repr(env))
-            closing_iterator = response(werkzeug_environ, start_response)
+            closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
             env.flush()
             return closing_iterator
 
