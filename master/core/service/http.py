@@ -75,9 +75,9 @@ def build_controller_class(installed: List[str]):
         current_list.extend(Controller.__children__[addon])
     if not current_list:
         current_list.append(Controller)
-    elif len(current_list) == 1:
-        return current_list[0]
-    return type('_Controller', tuple(filter_class(current_list)), {})
+    return type('_Controller', tuple(filter_class(current_list)), {
+        '__object__': None,
+    })
 
 
 class Converter(Component, _BaseConverter):
@@ -102,8 +102,11 @@ class Controller(Component):
             cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
-        if cls.__module__.startswith('master.core.') and cls.__name__ == 'Controller' and cls.__object__:
-            return cls.__object__(*args, **kwargs)
+        if cls.__object__ is not None:
+            if isinstance(cls.__object__, type):
+                return cls.__object__.__new__(cls.__object__, (), {})
+            else:
+                raise TypeError('__object__ must be a class (type), not an instance')
         return super().__new__(cls)
 
     def dispatch(self):

@@ -29,7 +29,7 @@ class Main(Controller):
                 status_code = 500
                 if isinstance(error, HTTPException) or hasattr(error, 'code'):
                     status_code = error.code
-                return Response(template=f'base.page_{status_code}', status=status_code, context={
+                return Response(template=f'base.page_{int(status_code)}', status=status_code, context={
                     'error': error,
                 })
             raise error
