@@ -64,7 +64,7 @@ class Endpoint:
                 status = 200
                 if isinstance(response, tuple):
                     response, status = response
-                return Response(response=response, status=status)
+                response = Response(response=response, status=status)
             return response
         return _
 

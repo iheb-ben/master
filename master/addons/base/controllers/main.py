@@ -24,13 +24,12 @@ class Main(Controller):
                         return controller_func(**kwargs)
                 return controller_func(**kwargs)
             return Endpoint.wrap(rule.endpoint)()
-        except NotFound:
-            if request.httprequest.method == 'GET':
-                return Response(template='base.page_not_found', status=404)
-            raise
         except Exception as error:
-            if not isinstance(error, HTTPException) and request.httprequest.method == 'GET':
-                return Response(template='base.page_internal_error', status=500, context={
+            if request.httprequest.method == 'GET':
+                status_code = 500
+                if isinstance(error, HTTPException):
+                    status_code = error.code
+                return Response(template=f'base.page_{status_code}', status=status_code, context={
                     'error': error,
                 })
             raise error
