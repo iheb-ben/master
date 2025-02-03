@@ -17,7 +17,8 @@ class Response(_Response):
         super().__init__(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
-        self.context.update(request.context)
+        for key, item in request.context.items():
+            self.context.setdefault(key, item)
         if not self.data and self.status_code == 200:
             self.status_code = 204
         return super().__call__(*args, **kwargs)
