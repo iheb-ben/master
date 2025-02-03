@@ -13,10 +13,8 @@ def is_valid_name(string: str) -> bool:
 
 def simplify_class_name(string: str) -> str:
     result = ''
-    for char in string:
-        if char == '_':
-            continue
-        if char.isupper():
+    for index, char in enumerate(string):
+        if char.isupper() and index != 0:
             result += '_'
         result += char.lower()
     return result
