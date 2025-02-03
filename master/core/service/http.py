@@ -162,3 +162,13 @@ def route(
             )
         return func
     return _
+
+
+def json_route(*args, **kwargs):
+    kwargs['content'] = 'application/json'
+    return route(*args, **kwargs)
+
+
+def html_route(*args, **kwargs):
+    kwargs['content'] = 'text/html'
+    return route(*args, **kwargs)

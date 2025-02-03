@@ -3,7 +3,7 @@ from typing import Any, Dict, Tuple, Callable
 from werkzeug.exceptions import NotFound, HTTPException, ServiceUnavailable
 from werkzeug.routing import Map, Rule
 from master.core.api import request
-from master.core.service.http import route, Controller, Response, Endpoint
+from master.core.service.http import route, html_route, Controller, Response, Endpoint
 from master.core.service.static import STATIC_FOLDER
 
 
@@ -69,7 +69,7 @@ class Main(Controller):
     def homepage(self):
         return 'Home Page'
 
-    @route('/_/simulate/<int:code>', rollback=False, sitemap=False)
+    @html_route('/_/simulate/<int:code>', rollback=False, sitemap=False)
     def _simulate_http_error(self, code):
         error = HTTPException(description='Simulate HTTP Exception')
         error.code = code
