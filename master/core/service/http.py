@@ -160,7 +160,7 @@ class Controller(Component):
             cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
-        check_arguments: Callable = lambda: args and args[-1].get('__object__') is None
+        check_arguments: Callable[[], bool] = lambda: args and args[-1].get('__object__') is None
         if cls.__object__ is not None and not check_arguments():
             if isinstance(cls.__object__, type):
                 return cls.__object__.__new__(cls.__object__, (), {
