@@ -10,8 +10,8 @@ from master.core.service.static import STATIC_FOLDER
 # noinspection PyMethodMayBeStatic
 class Main(Controller):
     def dispatch(self):
-        if request.application.reload_event.is_set() and not request.httprequest.path.startswith('/_/simulate/'):
-            raise ServiceUnavailable()
+        if request.error and not request.httprequest.path.startswith('/_/simulate/'):
+            raise request.error
         adapter = Map(
             rules=self.get_rules(),
             converters=self.get_converters(),
@@ -21,6 +21,7 @@ class Main(Controller):
             rule, kwargs = details
             if not rule.endpoint:
                 raise NotFound()
+            request.endpoint = rule.endpoint
             return rule.endpoint(**kwargs)
         except Exception as error:
             if request.httprequest.method == 'GET':
@@ -45,6 +46,7 @@ class Main(Controller):
                 current_list.append(Endpoint(
                     func_name=endpoint.dispatch_url,
                     auth=endpoint.is_public,
+                    content=endpoint.content_type,
                     rollback=True,
                     sitemap=True,
                 ).as_rule(url=endpoint.url))
@@ -74,7 +76,6 @@ class Main(Controller):
         if error.code == 503:
             return Response(
                 response=STATIC_FOLDER.joinpath('server_unavailable.html').open(),
-                content_type='text/html',
                 status=error.code,
             )
         else:

@@ -34,22 +34,26 @@ class Application:
     def shutdown(self):
         self.__class__.stop_event.set()
 
-    def dispatch(self, httprequest, werkzeug_environ, start_response):
-        request = Request(httprequest, self)
+    @staticmethod
+    def dispatch(request, werkzeug_environ, start_response):
         with request.create_environment() as erp_environ:
             request.env = erp_environ
             closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
             erp_environ.flush()
-        del request
         return closing_iterator
 
     def __call__(self, werkzeug_environ, start_response):
         httprequest = wrappers.Request(werkzeug_environ)
-        if self.__class__.reload_event.is_set():
-            error = ServiceUnavailable()
-            if httprequest.method != 'GET':
-                raise error
-        return self.dispatch(httprequest, werkzeug_environ, start_response)
+        request = Request(httprequest, self)
+        try:
+            if self.__class__.reload_event.is_set():
+                request.error = ServiceUnavailable()
+                if httprequest.method != 'GET':
+                    raise error
+            return self.dispatch(request, werkzeug_environ, start_response)
+        finally:
+            del request
+            del httprequest
 
 
 def start_server(pool: PoolManager):

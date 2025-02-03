@@ -11,7 +11,6 @@ from master.core.tools import filter_class, simplify_class_name
 class Response(_Response):
     def __init__(self, *args, **kwargs):
         self.template = kwargs.pop('template', None)
-        self.context = kwargs.pop('context', {})
         if self.template:
             kwargs.setdefault('content_type', 'text/html')
         super().__init__(*args, **kwargs)
@@ -23,7 +22,7 @@ class Response(_Response):
 
 
 class Request:
-    __slots__ = ('httprequest', 'application', 'env')
+    __slots__ = ('httprequest', 'application', 'env', 'error', 'context', 'endpoint')
 
     def __new__(cls, *args, **kwargs):
         if request:
@@ -33,10 +32,13 @@ class Request:
             Environment.push_request(new_request)
         return new_request
 
-    def __init__(self, httprequest: _Request, application: Any):
+    def __init__(self, httprequest: _Request, application: Callable):
         self.httprequest = httprequest
         self.application = application
         self.env: Optional[Environment] = None
+        self.endpoint: Optional[Endpoint] = None
+        self.error: Optional[Exception] = None
+        self.context: Dict[str, Any] = {}
 
     @contextmanager
     def create_environment(self, **kwargs) -> Generator[Environment, None, None]:
@@ -58,15 +60,18 @@ class Endpoint:
         auth: bool = False,
         rollback: bool = False,
         sitemap: bool = True,
+        content: Optional[str] = None,
     ):
         self.auth = auth
         self.func_name = func_name
         self.rollback = rollback
         self.sitemap = sitemap
+        self.content = content
 
     def wrap(self, func: Callable, **kwargs):
         kwargs.setdefault('auth', self.auth)
         kwargs.setdefault('rollback', self.rollback)
+        kwargs.setdefault('content', self.content)
         kwargs['sitemap'] = self.sitemap
         return self.__class__(func_name=func, **kwargs)
 
@@ -85,6 +90,8 @@ class Endpoint:
             if isinstance(response, tuple):
                 response, status = response
             response = Response(response=response, status=status)
+        if self.content and response.content_type.startswith('text/plain'):
+            response.content_type = self.content
         return response
 
 
@@ -132,7 +139,13 @@ class Controller(Component):
         raise NotImplemented()
 
 
-def route(*urls, auth: bool = False, rollback: bool = True, sitemap: bool = True):
+def route(
+    *urls,
+    auth: bool = False,
+    rollback: bool = True,
+    sitemap: bool = True,
+    content: Optional[str] = 'text/html',
+):
     def _(func: Callable):
         if not func.__module__.startswith('master.addons.'):
             raise ValueError('Current function is not part of the master addons package')
@@ -145,6 +158,7 @@ def route(*urls, auth: bool = False, rollback: bool = True, sitemap: bool = True
                 auth=auth,
                 rollback=rollback,
                 sitemap=sitemap,
+                content=content,
             )
         return func
     return _
