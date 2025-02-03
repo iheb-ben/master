@@ -11,11 +11,13 @@ from master.core.tools import filter_class, simplify_class_name
 class Response(_Response):
     def __init__(self, *args, **kwargs):
         self.template = kwargs.pop('template', None)
+        self.context = kwargs.pop('context', {})
         if self.template:
             kwargs.setdefault('content_type', 'text/html')
         super().__init__(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
+        self.context.update(request.context)
         if not self.data and self.status_code == 200:
             self.status_code = 204
         return super().__call__(*args, **kwargs)

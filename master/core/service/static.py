@@ -30,7 +30,7 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         return module_url, self.get_directory_loader(str(path))
 
     def _iterate_application_exports(self):
-        yield self._fetch(Path(__file__).parent.joinpath('../static').absolute().resolve())
+        yield self._fetch(STATIC_FOLDER)
         for module_name, system_path in self.app.paths.items():
             static_folder = system_path / 'static'
             if static_folder.is_dir():
