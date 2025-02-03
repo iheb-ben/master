@@ -1,4 +1,5 @@
 import traceback
+from collections import defaultdict
 from typing import Any, Dict, Tuple, Callable
 from werkzeug.exceptions import NotFound, HTTPException, ServiceUnavailable
 from werkzeug.routing import Map, Rule
@@ -32,14 +33,14 @@ class Main(Controller):
             raise error
 
     def get_converters(self):
-        return self.__converters__
+        return self.__compiled_converters__
 
     # noinspection PyBroadException
     def get_http_rules(self):
         current_list = []
         if request.httprequest.path.startswith('/_/simulate/'):
             return current_list
-        if request.env.registry:
+        if request.env.model_exists('ir.http'):
             for endpoint in request.env['ir.http'].sudo().search([]):
                 current_list.append(Endpoint(
                     func_name=endpoint.dispatch_url,
@@ -51,14 +52,20 @@ class Main(Controller):
         return current_list
 
     def get_rules(self):
-        current_list = []
-        installed_addons = set(request.application.installed)
-        for url, module_endpoint in self.__endpoints__.items():
-            for module, endpoint in module_endpoint.items():
-                if module not in installed_addons:
+        current_list, added_urls = [], set()
+        for installed_module in reversed(request.application.installed):
+            for url, module_endpoint in self.__endpoints__.items():
+                if url in added_urls:
                     continue
-                controller_method: Callable = getattr(self, endpoint.func_name, lambda *args, **kwargs: None)
-                current_list.append(endpoint.wrap(func=controller_method).as_rule(url=url))
+                done = False
+                for module, endpoint in module_endpoint.items():
+                    if module != installed_module:
+                        continue
+                    controller_method: Callable = getattr(self, endpoint.func_name, lambda *args, **kwargs: None)
+                    current_list.append(endpoint.wrap(func=controller_method).as_rule(url=url))
+                    done = True
+                if done:
+                    added_urls.add(url)
         return current_list + self.get_http_rules()
 
     @route('/')

@@ -1,4 +1,4 @@
-from collections import defaultdict, OrderedDict
+from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union
 from werkzeug.routing import BaseConverter as _BaseConverter, Rule
@@ -112,17 +112,41 @@ def build_controller_class(installed: List[str]):
     })
 
 
+def build_converters_class(installed: List[str]):
+    filtered_converters = defaultdict(list)
+    for name, module_converters in Controller.__converters__.items():
+        for addon in installed:
+            filtered_converters[name].extend(module_converters.get(addon, []))
+    converters = {}
+    for name, elements in filtered_converters.items():
+        converter_klass = filter_class(elements)
+        if len(converter_klass) == 1:
+            converter_klass = converter_klass[0]
+        else:
+            converter_klass = type('_Converter', tuple(converter_klass), {})
+        converters[name] = converter_klass
+    return converters
+
+
 class Converter(Component, _BaseConverter):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        Controller.__converters__[simplify_class_name(cls.__name__)] = cls
+        # noinspection PyTypeChecker
+        current_addon: Optional[str] = cls.__addon__
+        if current_addon:
+            converter_name = simplify_class_name(cls.__name__)
+            if not Controller.__converters__[converter_name].get(current_addon):
+                Controller.__converters__[converter_name][current_addon] = [cls]
+            else:
+                Controller.__converters__[converter_name][current_addon].append(cls)
 
 
 class Controller(Component):
     __object__: Optional[Type] = None
     __children__: Dict[str, List[Type]] = defaultdict(list)
-    __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(OrderedDict)
-    __converters__: Dict[str, Type[Converter]] = {}
+    __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(dict)
+    __converters__: Dict[str, Dict[str, List[Type]]] = defaultdict(dict)
+    __compiled_converters__: Dict[str, Converter] = {}
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)

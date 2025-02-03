@@ -3,7 +3,7 @@ from threading import Event
 from werkzeug import wrappers
 from werkzeug.exceptions import ServiceUnavailable
 from werkzeug.serving import make_server, ThreadedWSGIServer
-from .http import Request, Controller, build_controller_class
+from .http import Request, Controller, build_controller_class, build_converters_class
 from .static import StaticFilesMiddleware
 from master.core.tools.config import environ
 from master.core.database.connector import PoolManager
@@ -29,6 +29,7 @@ class Application:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
         Controller.__object__ = build_controller_class(self.installed)
+        Controller.__object__.__compiled_converters__ = build_converters_class(self.installed)
         self.reload_event.clear()
 
     def shutdown(self):

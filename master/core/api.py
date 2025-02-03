@@ -61,6 +61,9 @@ class Environment:
     def is_sudo(self):
         return self._sudo
 
+    def model_exists(self, item: str):
+        return item in self.registry
+
     def __getitem__(self, item):
         return self.registry[item](self)
 
