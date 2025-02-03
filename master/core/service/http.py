@@ -12,6 +12,8 @@ class Response(_Response):
     def __init__(self, *args, **kwargs):
         self.template = kwargs.pop('template', None)
         self.context = kwargs.pop('context', {})
+        if self.template:
+            kwargs.setdefault('content_type', 'text/html')
         super().__init__(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
@@ -50,14 +52,22 @@ class Request:
 
 
 class Endpoint:
-    def __init__(self, func_name: Optional[Union[str, Callable]] = None, auth: bool = False, rollback: bool = False):
+    def __init__(
+        self,
+        func_name: Optional[Union[str, Callable]] = None,
+        auth: bool = False,
+        rollback: bool = False,
+        sitemap: bool = True,
+    ):
         self.auth = auth
         self.func_name = func_name
         self.rollback = rollback
+        self.sitemap = sitemap
 
     def wrap(self, func: Callable, **kwargs):
         kwargs.setdefault('auth', self.auth)
         kwargs.setdefault('rollback', self.rollback)
+        kwargs['sitemap'] = self.sitemap
         return self.__class__(func_name=func, **kwargs)
 
     def as_rule(self, url: str):
@@ -122,7 +132,7 @@ class Controller(Component):
         raise NotImplemented()
 
 
-def route(*urls, auth: bool = False, rollback: bool = True):
+def route(*urls, auth: bool = False, rollback: bool = True, sitemap: bool = True):
     def _(func: Callable):
         if not func.__module__.startswith('master.addons.'):
             raise ValueError('Current function is not part of the master addons package')
@@ -134,6 +144,7 @@ def route(*urls, auth: bool = False, rollback: bool = True):
                 func_name=func.__name__,
                 auth=auth,
                 rollback=rollback,
+                sitemap=sitemap,
             )
         return func
     return _

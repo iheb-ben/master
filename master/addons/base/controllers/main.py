@@ -1,13 +1,17 @@
 import traceback
 from typing import Any, Dict, Tuple, Callable
-from werkzeug.exceptions import NotFound, HTTPException
+from werkzeug.exceptions import NotFound, HTTPException, ServiceUnavailable
 from werkzeug.routing import Map, Rule
 from master.core.api import request
 from master.core.service.http import route, Controller, Response, Endpoint
+from master.core.service.static import STATIC_FOLDER
 
 
+# noinspection PyMethodMayBeStatic
 class Main(Controller):
     def dispatch(self):
+        if request.application.reload_event.is_set() and not request.httprequest.path.startswith('/_/simulate/'):
+            raise ServiceUnavailable()
         adapter = Map(
             rules=self.get_rules(),
             converters=self.get_converters(),
@@ -31,6 +35,23 @@ class Main(Controller):
     def get_converters(self):
         return self.__converters__
 
+    # noinspection PyBroadException
+    def get_http_rules(self):
+        current_list = []
+        if request.httprequest.path.startswith('/_/simulate/'):
+            return current_list
+        try:
+            for endpoint in request.env['ir.http'].sudo().search([]):
+                current_list.append(Endpoint(
+                    func_name=endpoint.dispatch_url,
+                    auth=endpoint.is_public,
+                    rollback=True,
+                    sitemap=True,
+                ).as_rule(url=endpoint.url))
+        except Exception:
+            pass
+        return current_list
+
     def get_rules(self):
         current_list = []
         installed_addons = set(request.application.installed)
@@ -40,14 +61,23 @@ class Main(Controller):
                     continue
                 controller_method: Callable = getattr(self, endpoint.func_name, lambda *args, **kwargs: None)
                 current_list.append(endpoint.wrap(func=controller_method).as_rule(url=url))
-        # noinspection PyBroadException
-        try:
-            for endpoint in request.env['ir.http'].sudo().search([]):
-                current_list.append(Endpoint(func_name=endpoint.dispatch_url, auth=endpoint.is_public, rollback=True).as_rule(url=endpoint.url))
-        except Exception:
-            pass
-        return current_list
+        return current_list + self.get_http_rules()
 
     @route('/')
     def homepage(self):
         return 'Home Page'
+
+    @route('/_/simulate/<int:code>', rollback=False, sitemap=False)
+    def _simulate_http_error(self, code):
+        error = HTTPException(description='Simulate HTTP Exception')
+        error.code = code
+        if error.code == 503:
+            return Response(
+                response=STATIC_FOLDER.joinpath('server_unavailable.html').open(),
+                content_type='text/html',
+                status=error.code,
+            )
+        else:
+            return Response(template=f'base.page_{error.code}', status=error.code, context={
+                'error': error,
+            })

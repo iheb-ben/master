@@ -3,6 +3,8 @@ from pathlib import Path
 from typing import Union, Optional
 from werkzeug.middleware.shared_data import SharedDataMiddleware
 
+STATIC_FOLDER = Path(__file__).parent.parent.parent.joinpath('static').absolute().resolve()
+
 
 class StaticFilesMiddleware(SharedDataMiddleware):
     def __init__(self, *args, **kwargs):

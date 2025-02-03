@@ -54,6 +54,6 @@ def decompress_zip(path: Union[Path, PathLike, str], extract_dir: Optional[str] 
         return dir_path_obj
 
 
-temporairy_folder = create_path(Path(tempfile.gettempdir()) / 'master')
-temporairy_addons_folder = create_path(temporairy_folder / 'addons')
-temporairy_session_folder = create_path(temporairy_folder / 'session')
+TEMP_FOLDER = create_path(Path(tempfile.gettempdir()) / 'master')
+TEMP_ADDONS_FOLDER = create_path(TEMP_FOLDER / 'addons')
+TEMP_SESSION_FOLDER = create_path(TEMP_FOLDER / 'session')

@@ -1,5 +1,4 @@
 import atexit
-import os
 from threading import Event
 from werkzeug import wrappers
 from werkzeug.exceptions import ServiceUnavailable
@@ -35,16 +34,22 @@ class Application:
     def shutdown(self):
         self.__class__.stop_event.set()
 
-    def __call__(self, werkzeug_environ, start_response):
-        if self.__class__.reload_event.is_set():
-            raise ServiceUnavailable()
-        httprequest = wrappers.Request(werkzeug_environ)
+    def dispatch(self, httprequest, werkzeug_environ, start_response):
         request = Request(httprequest, self)
         with request.create_environment() as erp_environ:
             request.env = erp_environ
             closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
             erp_environ.flush()
-            return closing_iterator
+        del request
+        return closing_iterator
+
+    def __call__(self, werkzeug_environ, start_response):
+        httprequest = wrappers.Request(werkzeug_environ)
+        if self.__class__.reload_event.is_set():
+            error = ServiceUnavailable()
+            if httprequest.method != 'GET':
+                raise error
+        return self.dispatch(httprequest, werkzeug_environ, start_response)
 
 
 def start_server(pool: PoolManager):

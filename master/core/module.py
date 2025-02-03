@@ -2,12 +2,10 @@ import importlib
 import sys
 from pathlib import Path
 from typing import Dict, List
-
 from psycopg2.sql import SQL
-
 from master.core.database.cursor import Cursor
 from master.core.tools.config import environ
-from master.core.tools.files import iterate_directory, decompress_zip, temporairy_addons_folder
+from master.core.tools.files import iterate_directory, decompress_zip, TEMP_ADDONS_FOLDER
 
 AddonsPaths = Dict[str, Path]
 _init_file_name = '__init__.py'
@@ -26,7 +24,7 @@ def modules_paths() -> AddonsPaths:
     for current in reversed(environ['ADDONS_PATHS']):
         for path_obj in iterate_directory(current):
             if path_obj.suffix == '.zip':
-                path_obj = decompress_zip(path_obj, temporairy_addons_folder / path_obj.stem)
+                path_obj = decompress_zip(path_obj, TEMP_ADDONS_FOLDER / path_obj.stem)
             elif path_obj.suffix:
                 continue
             if not is_addon_package(path_obj):

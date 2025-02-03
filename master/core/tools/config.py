@@ -5,13 +5,13 @@ from pathlib import Path
 from typing import Optional, Dict
 from dotenv import load_dotenv
 from typing import Any
-from .files import temporairy_folder, create_path, to_path
+from .files import TEMP_FOLDER, create_path, to_path
 from .typing import cast_string
 
 parser = ArgumentParser(prog='MASTER', description='MASTER ERP tool')
 general_setting = parser.add_argument_group(title='HTTP settings', description='Server full settings')
 general_setting.add_argument('--env-path', dest='dotenv_path', default='./.env', help='Default env file location')
-general_setting.add_argument('--directory', default=str(temporairy_folder), help='Default ERP directory for storing data')
+general_setting.add_argument('--directory', default=str(TEMP_FOLDER), help='Default ERP directory for storing data')
 general_setting.add_argument('--addons-paths', nargs='+', help='Default ERP addons paths')
 general_setting.add_argument('-e', '--env', dest='env', default='development', help='Default env')
 general_setting.add_argument('-p', '--port', type=int, default=8080, help='HTTP port')
