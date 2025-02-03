@@ -106,10 +106,12 @@ def build_controller_class(installed: List[str]):
     for addon in installed:
         current_list.extend(Controller.__children__[addon])
     if not current_list:
-        current_list.append(Controller)
-    return type('_Controller', tuple(filter_class(current_list)), {
-        '__object__': None,
-    })
+        return None
+    controller_classes = filter_class(current_list)
+    if len(controller_classes) == 1:
+        return controller_classes[0]
+    else:
+        return type('_Controller', tuple(controller_classes), {})
 
 
 def build_converters_class(installed: List[str]):
@@ -158,11 +160,14 @@ class Controller(Component):
             cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
-        if cls.__object__ is not None:
+        check_arguments: Callable = lambda: args and args[-1].get('__object__') is None
+        if cls.__object__ is not None and not check_arguments():
             if isinstance(cls.__object__, type):
-                return cls.__object__.__new__(cls.__object__, (), {})
+                return cls.__object__.__new__(cls.__object__, (), {
+                    '__object__': None,
+                })
             else:
-                raise TypeError('__object__ must be a class (type), not an instance')
+                raise TypeError('__object__ must be a class (type)')
         return super().__new__(cls)
 
     def dispatch(self):

@@ -29,7 +29,8 @@ class Application:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
         Controller.__object__ = build_controller_class(self.installed)
-        Controller.__object__.__compiled_converters__ = build_converters_class(self.installed)
+        if Controller.__object__ is not None:
+            Controller.__object__.__compiled_converters__ = build_converters_class(self.installed)
         self.reload_event.clear()
 
     def shutdown(self):
