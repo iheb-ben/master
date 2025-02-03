@@ -34,6 +34,7 @@ class Cursor:
             self._savepoints.remove(name)
         if self._begin and not self._savepoints:
             self.execute(sql='END')
+            self._begin = False
 
     @contextmanager
     def with_savepoint(self) -> Generator[str, None, None]:
