@@ -49,7 +49,7 @@ class Application:
             if self.__class__.reload_event.is_set():
                 request.error = ServiceUnavailable()
                 if httprequest.method != 'GET':
-                    raise error
+                    raise request.error
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
             del request
