@@ -143,12 +143,24 @@ class Converter(Component, _BaseConverter):
                 Controller.__converters__[converter_name][current_addon].append(cls)
 
 
+_compiled_controller: Optional[Type] = None
+
+
 class Controller(Component):
-    __object__: Optional[Type] = None
     __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(dict)
     __converters__: Dict[str, Dict[str, List[Type]]] = defaultdict(dict)
     __compiled_converters__: Dict[str, Converter] = {}
+
+    @staticmethod
+    def register_class(new_class):
+        globals()['_compiled_controller'] = new_class
+
+    # noinspection PyPropertyDefinition
+    @classmethod
+    @property
+    def __object__(cls):
+        return _compiled_controller
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -160,14 +172,8 @@ class Controller(Component):
             cls.__children__[current_addon].append(cls)
 
     def __new__(cls, *args, **kwargs):
-        check_arguments: Callable[[], bool] = lambda: kwargs.get('__object__', True) is None or (args and args[-1].get('__object__', True) is None)
-        if cls.__object__ is not None and not check_arguments():
-            if isinstance(cls.__object__, type):
-                return cls.__object__.__new__(cls.__object__, (), {
-                    '__object__': None,
-                })
-            else:
-                raise TypeError('__object__ must be a class (type)')
+        if cls is Controller and _compiled_controller:
+            return _compiled_controller.__new__(_compiled_controller, *args, **kwargs)
         return super().__new__(cls)
 
     def dispatch(self):
