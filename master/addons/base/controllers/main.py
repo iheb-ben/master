@@ -1,6 +1,5 @@
 import traceback
-from typing import Any, Dict, Tuple
-from werkzeug import wrappers
+from typing import Any, Dict, Tuple, Callable
 from werkzeug.exceptions import NotFound, HTTPException
 from werkzeug.routing import Map, Rule
 from master.core.api import request
@@ -18,17 +17,7 @@ class Main(Controller):
             rule, kwargs = details
             if not rule.endpoint:
                 raise NotFound()
-            if isinstance(rule.endpoint, tuple):
-                method_name, endpoint = rule.endpoint
-                controller_func = Endpoint.wrap(getattr(self, method_name))
-                if endpoint.rollback:
-                    with request.env.cursor.with_savepoint():
-                        return controller_func(**kwargs)
-                return controller_func(**kwargs)
-            elif callable(rule.endpoint):
-                return Endpoint.wrap(rule.endpoint)()
-            else:
-                raise RuntimeError('Weird endpoint definition')
+            return rule.endpoint(**kwargs)
         except Exception as error:
             if request.httprequest.method == 'GET':
                 status_code = 500
@@ -44,16 +33,21 @@ class Main(Controller):
 
     def get_rules(self):
         current_list = []
-        for module in request.application.installed:
-            for name, endpoints in self.__endpoints__.items():
-                for endpoint in endpoints:
-                    if endpoint.module != module:
-                        continue
-                    current_list.append(Rule(string=endpoint.url, endpoint=(name, endpoint)))
+        installed_addons = set(request.application.installed)
+        for url, module_endpoint in self.__endpoints__.items():
+            for module, endpoint in module_endpoint.items():
+                if module not in installed_addons:
+                    continue
+                controller_method: Callable = getattr(self, endpoint.func_name, lambda *args, **kwargs: None)
+                current_list.append(endpoint.wrap(func=controller_method).as_rule(url=url))
         # noinspection PyBroadException
         try:
-            for endpoint in request.env['ir.http'].search([]):
-                current_list.append(Rule(string=endpoint.url, endpoint=endpoint.dispatch_url))
+            for endpoint in request.env['ir.http'].sudo().search([]):
+                current_list.append(Endpoint(func_name=endpoint.dispatch_url, auth=endpoint.is_public, rollback=True).as_rule(url=endpoint.url))
         except Exception:
             pass
         return current_list
+
+    @route('/')
+    def homepage(self):
+        return 'Home Page'

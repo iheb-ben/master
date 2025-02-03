@@ -1,7 +1,7 @@
-from collections import defaultdict
+from collections import defaultdict, OrderedDict
 from contextlib import contextmanager
-from typing import Any, Type, Optional, List, Dict, Callable, Generator
-from werkzeug.routing import BaseConverter as _BaseConverter
+from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union
+from werkzeug.routing import BaseConverter as _BaseConverter, Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
 from master.core.api import Environment, request, Component
 from master.core.database.cursor import Cursor
@@ -50,23 +50,32 @@ class Request:
 
 
 class Endpoint:
-    def __init__(self, url: str, auth: bool, module: str, rollback: bool):
-        self.module = module
+    def __init__(self, func_name: Optional[Union[str, Callable]] = None, auth: bool = False, rollback: bool = False):
         self.auth = auth
-        self.url = url
+        self.func_name = func_name
         self.rollback = rollback
 
-    @staticmethod
-    def wrap(func: Callable):
-        def _(*args, **kwargs):
-            response = func(*args, **kwargs) or Response(status=200)
-            if not isinstance(response, _Response):
-                status = 200
-                if isinstance(response, tuple):
-                    response, status = response
-                response = Response(response=response, status=status)
-            return response
-        return _
+    def wrap(self, func: Callable, **kwargs):
+        kwargs.setdefault('auth', self.auth)
+        kwargs.setdefault('rollback', self.rollback)
+        return self.__class__(func_name=func, **kwargs)
+
+    def as_rule(self, url: str):
+        return Rule(string=url, endpoint=self)
+
+    def __call__(self, *args, **kwargs):
+        if self.rollback:
+            with request.env.cursor.with_savepoint():
+                response = self.func_name(*args, **kwargs)
+        else:
+            response = self.func_name(*args, **kwargs)
+        response = response or Response(status=200)
+        if not isinstance(response, _Response):
+            status = 200
+            if isinstance(response, tuple):
+                response, status = response
+            response = Response(response=response, status=status)
+        return response
 
 
 def build_controller_class(installed: List[str]):
@@ -89,7 +98,7 @@ class Converter(Component, _BaseConverter):
 class Controller(Component):
     __object__: Optional[Type] = None
     __children__: Dict[str, List[Type]] = defaultdict(list)
-    __endpoints__: Dict[str, List[Endpoint]] = defaultdict(list)
+    __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(OrderedDict)
     __converters__: Dict[str, Type[Converter]] = {}
 
     def __init_subclass__(cls, **kwargs):
@@ -121,11 +130,10 @@ def route(*urls, auth: bool = False, rollback: bool = True):
         if not module:
             raise RuntimeError('Routing issue, module name not found')
         for url in urls:
-            Controller.__endpoints__[func.__name__].append(Endpoint(
-                url=url,
+            Controller.__endpoints__[url][module] = Endpoint(
+                func_name=func.__name__,
                 auth=auth,
-                module=module,
                 rollback=rollback,
-            ))
+            )
         return func
     return _
