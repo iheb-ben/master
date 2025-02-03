@@ -46,13 +46,14 @@ def attach_order(paths: AddonsPaths, load_order: List[str]):
 
 
 def select_addons(cursor: Cursor):
+    update_modules = environ['UPDATE_ADDONS'] or []
     default_select = 'SELECT meta_name FROM ir_module WHERE state'
-    return [row[0] for row in cursor.execute(
+    return environ['BASE_ADDONS'] or [row[0] for row in cursor.execute(
         sql=SQL(f"{default_select} IN ('installed', 'to_update')"),
         raise_error=False,
         default=[['base'], ['web']],
-    )], [row[0] for row in cursor.execute(
+    )], list(set([row[0] for row in cursor.execute(
         sql=SQL(f"{default_select} = 'to_update'"),
         raise_error=False,
         default=[],
-    )]
+    )] + update_modules))

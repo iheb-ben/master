@@ -29,10 +29,10 @@ class Application:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
         Controller.__object__ = build_controller_class(self.installed)
-        self.__class__.reload_event.clear()
+        self.reload_event.clear()
 
     def shutdown(self):
-        self.__class__.stop_event.set()
+        self.stop_event.set()
 
     @staticmethod
     def dispatch(request, werkzeug_environ, start_response):
@@ -46,7 +46,7 @@ class Application:
         httprequest = wrappers.Request(werkzeug_environ)
         request = Request(httprequest, self)
         try:
-            if self.__class__.reload_event.is_set():
+            if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
                 if httprequest.method != 'GET':
                     raise request.error

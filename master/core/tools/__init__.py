@@ -24,7 +24,10 @@ def simplify_class_name(string: str) -> str:
 
 def filter_class(class_list: List[Type]):
     valid_elements = []
-    for cls in reversed(class_list):
-        if not any(cls in _class.__mro__[1:] for _class in class_list if _class != cls):
-            valid_elements.append(cls)
+    if len(class_list) == 1:
+        valid_elements = class_list
+    elif len(class_list) > 1:
+        for cls in reversed(class_list):
+            if not any(cls in _class.__mro__[1:] for _class in class_list if _class != cls):
+                valid_elements.append(cls)
     return valid_elements
