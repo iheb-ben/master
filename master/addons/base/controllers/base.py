@@ -79,6 +79,7 @@ class Base(Controller):
                     controller_method: Callable = getattr(self, endpoint.func_name, lambda *args, **kwargs: None)
                     current_list.append(endpoint.wrap(func=controller_method).as_rule(url=url))
                     done = True
+                    break
                 if done:
                     added_urls.add(url)
         return current_list + self.get_http_rules()
