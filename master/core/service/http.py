@@ -1,3 +1,4 @@
+import json
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union
@@ -91,10 +92,14 @@ class Endpoint:
         else:
             response = self.func_name(*args, **kwargs)
         response = response or Response(status=200)
+        if isinstance(response, dict):
+            response = json.dumps(response)
         if not isinstance(response, _Response):
             status = 200
             if isinstance(response, tuple):
                 response, status = response
+            if isinstance(response, dict):
+                response = json.dumps(response)
             response = Response(response=response, status=status)
         if self.content and response.content_type.startswith('text/plain'):
             response.content_type = self.content
