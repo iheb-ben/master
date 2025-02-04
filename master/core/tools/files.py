@@ -57,3 +57,13 @@ def decompress_zip(path: Union[Path, PathLike, str], extract_dir: Optional[str] 
 TEMP_FOLDER = create_path(Path(tempfile.gettempdir()) / 'master')
 TEMP_ADDONS_FOLDER = create_path(TEMP_FOLDER / 'addons')
 TEMP_SESSION_FOLDER = create_path(TEMP_FOLDER / 'session')
+TEMP_STATIC_FOLDER = create_path(TEMP_FOLDER / 'static')
+
+
+def update_directory(path_obj: Path):
+    global TEMP_FOLDER, TEMP_ADDONS_FOLDER, TEMP_SESSION_FOLDER, TEMP_STATIC_FOLDER
+    if path_obj != TEMP_FOLDER:
+        TEMP_FOLDER = path_obj
+        TEMP_ADDONS_FOLDER = create_path(path_obj / 'addons')
+        TEMP_SESSION_FOLDER = create_path(path_obj / 'session')
+        TEMP_STATIC_FOLDER = create_path(path_obj / 'static')

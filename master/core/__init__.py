@@ -1,3 +1,4 @@
+from . import exceptions
 from . import tools
 from . import database
 from . import api

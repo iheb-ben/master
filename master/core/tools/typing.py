@@ -1,4 +1,8 @@
-from typing import Type, Any
+from os import PathLike
+from pathlib import Path
+from typing import Type, Any, Union
+
+SystemPath = Union[Path, PathLike, str]
 
 
 def cast_string(o: str, value_type: Type) -> Any:

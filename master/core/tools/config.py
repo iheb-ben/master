@@ -5,7 +5,7 @@ from pathlib import Path
 from typing import Optional, Dict
 from dotenv import load_dotenv
 from typing import Any
-from .files import TEMP_FOLDER, create_path, to_path
+from .files import TEMP_FOLDER, create_path, to_path, update_directory
 from .typing import cast_string
 
 parser = ArgumentParser(prog='MASTER', description='MASTER ERP tool')
@@ -28,6 +28,23 @@ db_setting.add_argument('--database-max', dest='db_max_conn', type=int, default=
 environ: Dict[str, Any] = {}
 
 
+def _unique_addons_paths(paths: Optional[str] = None):
+    new_list = []
+    if not paths or paths.isspace():
+        return new_list
+    for current in reversed(paths.split(',')):
+        if not current or current.isspace():
+            continue
+        path_obj = Path(current).absolute().resolve()
+        if not path_obj.is_dir():
+            continue
+        current = str(path_obj)
+        if current in new_list:
+            continue
+        new_list.insert(0, current)
+    return new_list
+
+
 def main():
     arguments = parser.parse_args(sys.argv[1:])
     dotenv_path: Optional[Path] = Path(arguments.dotenv_path).absolute().resolve()
@@ -40,11 +57,9 @@ def main():
         if key == 'dotenv_path':
             continue
         elif key == 'addons_paths':
-            env_value = [o for o in map(lambda p: to_path(p), set(filter(lambda v: v, (env_value or '').split(',')))) if o.is_dir()]
-            value = [o for o in map(lambda p: to_path(p), set(value or [])) if o.is_dir()]
-        elif key == 'directory':
-            env_value = env_value and str(create_path(env_value)) or None
-            value = str(create_path(value))
+            env_value = _unique_addons_paths(env_value)
+            value = _unique_addons_paths(value)
         environ.setdefault(env_key, cast_string(env_value, type(value)) or value)
     environ.setdefault('HELP_MODE', any(p in sys.argv for p in ('-h', '--help')))
+    update_directory(create_path(environ['DIRECTORY']))
     return environ

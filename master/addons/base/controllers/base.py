@@ -4,8 +4,9 @@ from typing import Any, Dict, Tuple, Callable
 from werkzeug.exceptions import NotFound, HTTPException, ServiceUnavailable
 from werkzeug.routing import Map, Rule
 from master.core.api import request
+from master.core.exceptions import SimulateHTTPException
 from master.core.service.http import route, html_route, Controller, Response, Endpoint
-from master.core.service.static import STATIC_FOLDER
+from master.core.service.static import StaticFilesMiddleware
 
 
 # noinspection PyMethodMayBeStatic
@@ -16,7 +17,15 @@ class Base(Controller):
             status_code = 500
             if isinstance(error, HTTPException) or hasattr(error, 'code'):
                 status_code = int(error.code)
-            return Response(template=f'base.page_{status_code}', status=status_code)
+            if status_code == 503:
+                static_file_path = '/static/_/server_unavailable.html'
+                content = StaticFilesMiddleware.get_full_path(request.application, static_file_path).open()
+                response = Response(content, status=status_code)
+            else:
+                response = Response(template=f'base.page_{status_code}', status=status_code)
+            if request.rule:
+                response.content_type = request.rule.endpoint.content
+            return response
         raise error
 
     def dispatch(self):
@@ -35,7 +44,7 @@ class Base(Controller):
             request.env.flush()
             return response
         except Exception as error:
-            error.traceback = traceback.format_exc()
+            error.traceback = traceback.format_stack()
             return self.handle_error(error)
 
     def get_converters(self):
@@ -75,13 +84,6 @@ class Base(Controller):
 
     @html_route('/_/simulate/<int:code>', rollback=False, sitemap=False)
     def _simulate_http_error(self, code):
-        request.error = HTTPException(description='Simulate HTTP Exception')
-        request.error.code = code
-        request.error.traceback = traceback.format_stack()
-        if request.error.code == 503:
-            return Response(
-                response=STATIC_FOLDER.joinpath('server_unavailable.html').open(),
-                status=request.error.code,
-            )
-        else:
-            return Response(template=f'base.page_{request.error.code}', status=request.error.code)
+        error = SimulateHTTPException('Simulate HTTP Exception')
+        error.code = code
+        raise error
