@@ -1,4 +1,5 @@
-import importlib
+import importlib.util
+import importlib.machinery
 import sys
 from pathlib import Path
 from typing import Dict, List
@@ -39,10 +40,14 @@ def attach_order(paths: AddonsPaths, load_order: List[str]):
         if name not in paths:
             continue
         package_dir = paths[name]
-        if str(package_dir) not in sys.path:
-            sys.path.append(str(package_dir))
+        package_str = str(package_dir)
+        if package_str not in sys.path:
+            sys.path.append(package_str)
         module_name = f'master.addons.{name}'
-        importlib.import_module(module_name)
+        spec = importlib.util.spec_from_file_location(module_name, package_dir / '__init__.py')
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
 
 
 def select_addons(cursor: Cursor):

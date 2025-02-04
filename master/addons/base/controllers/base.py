@@ -11,20 +11,6 @@ from master.core.service.static import StaticFilesMiddleware
 
 # noinspection PyMethodMayBeStatic
 class Base(Controller):
-    def __init__(self, application, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._compiled_rules: Dict[str, Endpoint] = {}
-        for installed_module in reversed(application.installed):
-            for url, module_endpoint in self.__endpoints__.items():
-                if url in self._compiled_rules:
-                    continue
-                for module, endpoint in module_endpoint.items():
-                    if module != installed_module:
-                        continue
-                    controller_method: Callable = getattr(self, endpoint.func_name, lambda *margs, **mkwargs: None)
-                    self._compiled_rules.setdefault(url, endpoint.wrap(func=controller_method))
-                    break
-
     def handle_error(self, error: Exception):
         request.error = error
         if request.httprequest.method == 'GET':
@@ -81,10 +67,7 @@ class Base(Controller):
         return current_list
 
     def get_rules(self):
-        current_list = []
-        for url, endpoint in self._compiled_rules.items():
-            current_list.append(endpoint.as_rule(url=url))
-        return current_list + self.get_http_rules()
+        return super().get_rules() + self.get_http_rules()
 
     @html_route('/_/simulate/<int:code>', rollback=False, sitemap=False)
     def _simulate_http_error(self, code):

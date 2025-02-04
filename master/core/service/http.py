@@ -8,6 +8,8 @@ from master.core.api import Environment, request, Component
 from master.core.database.cursor import Cursor
 from master.core.tools import filter_class, simplify_class_name
 
+HTTP_METHODS = ['GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE']
+
 
 class Response(_Response):
     def __init__(self, *args, **kwargs):
@@ -109,13 +111,21 @@ class Endpoint:
             response.content_type = self.content
         return response
 
+    def __repr__(self):
+        func_name = self.func_name
+        if not isinstance(func_name, str):
+            func_name = func_name.__name__
+        required = self.auth and '*' or ''
+        methods = self.methods or HTTP_METHODS
+        return f'{func_name}{required} {methods} [CONTENT: {self.content}] (ID: {id(self)})'
+
 
 def build_controller_class(installed: List[str]):
     current_list = []
     for addon in installed:
         current_list.extend(Controller.__children__[addon])
     if not current_list:
-        return None
+        return Controller
     controller_classes = filter_class(current_list)
     if len(controller_classes) == 1:
         return controller_classes[0]
@@ -160,15 +170,34 @@ class Controller(Component):
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
-        # noinspection PyTypeChecker
         current_addon: Optional[str] = cls.__addon__
         if not current_addon and cls.__name__ != '_Controller':
             raise ValueError('Current controller is not part of the master addons package')
         if current_addon:
-            cls.__children__[current_addon].append(cls)
+            Controller.__children__[current_addon].append(cls)
 
-    def __init__(self, converters, *args, **kwargs):
-        self._compiled_converters = converters
+    def __init__(
+        self,
+        application: Any = None,
+        endpoints: Optional[Dict[str, Endpoint]] = None,
+        converters: Optional[Dict[str, Endpoint]] = None,
+    ):
+        self._compiled_endpoints = endpoints or {}
+        self._compiled_converters = converters or {}
+        if application is not None:
+            for installed_module in reversed(application.installed):
+                for url, module_endpoint in Controller.__endpoints__.items():
+                    if url in self._compiled_endpoints:
+                        continue
+                    for module, endpoint in module_endpoint.items():
+                        if module != installed_module or not hasattr(self, endpoint.func_name):
+                            continue
+                        controller_method: Callable = getattr(self, endpoint.func_name)
+                        self._compiled_endpoints.setdefault(url, endpoint.wrap(func=controller_method))
+                        break
+
+    def get_rules(self):
+        return [endpoint.as_rule(url=url) for url, endpoint in self._compiled_endpoints.items()]
 
     def dispatch(self):
         raise NotImplemented()

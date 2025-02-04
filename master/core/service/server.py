@@ -22,7 +22,7 @@ class Application:
         self.registry = {}
         self.installed = []
         self.to_update = []
-        self._controller = Controller(application=self, converters={})
+        self._controller = Controller()
         atexit.register(self.shutdown)
 
     def reload(self):
@@ -30,8 +30,11 @@ class Application:
         with self.pool.get_cursor() as cursor:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
-        compiled = build_controller_class(self.installed) or Controller
-        self._controller = compiled(application=self, converters=build_converters_class(self.installed))
+        compiled = build_controller_class(self.installed)
+        self._controller = compiled(
+            converters=build_converters_class(self.installed),
+            application=self,
+        )
         self.reload_event.clear()
 
     def shutdown(self):

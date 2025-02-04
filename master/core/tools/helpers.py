@@ -1,3 +1,7 @@
+from threading import RLock
+from typing import Dict, Any
+
+
 # noinspection PyPep8Naming
 class class_property:
     def __init__(self, fget=None, fset=None, fdel=None, doc=None):
@@ -48,11 +52,26 @@ class lazy_property(property):
 
 # noinspection PyPep8Naming
 class lazy_class_property(class_property):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.attr_name = f'__{self.fget.__name__}'
+    DATA: Dict[str, Any] = {}
+    _lock = RLock()
+
+    def _attribute_name(self, owner):
+        return f'{owner.__module__}.{owner.__qualname__}.{self.fget.__name__}'
 
     def __get__(self, instance, owner):
-        if self.attr_name not in owner.__dict__:
-            owner.__dict__[self.attr_name] = super().__get__(instance, owner)
-        return owner.__dict__[self.attr_name]
+        attr_name = self._attribute_name(owner)
+        with self._lock:
+            if attr_name not in self.DATA:
+                self.DATA[attr_name] = super().__get__(instance, owner)
+            return self.DATA[attr_name]
+
+    def __set__(self, owner, value):
+        attr_name = self._attribute_name(owner)
+        with self._lock:
+            self.DATA[attr_name] = value
+
+    def __delete__(self, owner):
+        attr_name = self._attribute_name(owner)
+        with self._lock:
+            if attr_name in self.DATA:
+                del self.DATA[attr_name]

@@ -5,13 +5,14 @@ from werkzeug.local import LocalStack, LocalProxy
 from master.core.database import PUBLIC_USER_ID
 from master.core.database.cursor import Cursor
 from master.core.tools import is_valid_name
+from master.core.tools.helpers import lazy_class_property
 
 _request_stack = LocalStack()
 request = LocalProxy(lambda: _request_stack.top)
 Context = Dict[str, Any]
 
 
-# noinspection PyPropertyDefinition
+# noinspection PyPropertyDefinition,PyMethodParameters
 class Component(object):
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -20,8 +21,7 @@ class Component(object):
 1. Can start with _ or an uppercase letter (A-Z).\n
 2. Contains only letters (A-Z, a-z).""")
 
-    @classmethod
-    @property
+    @lazy_class_property
     def __addon__(cls):
         if cls.__module__.startswith('master.addons.'):
             return cls.__module__.split('.')[2]
