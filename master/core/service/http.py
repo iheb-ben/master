@@ -1,7 +1,7 @@
 import json
 from collections import defaultdict
 from contextlib import contextmanager
-from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union
+from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union, Iterable
 from werkzeug.routing import BaseConverter as _BaseConverter, Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
 from master.core.api import Environment, request, Component
@@ -68,24 +68,28 @@ class Endpoint:
         rollback: bool = False,
         sitemap: bool = True,
         content: Optional[str] = None,
+        methods: Optional[List[str]] = None,
     ):
         self.auth = auth
         self.func_name = func_name
         self.rollback = rollback
         self.sitemap = sitemap
         self.content = content
+        self.methods = methods
 
     def wrap(self, func: Callable, **kwargs):
         kwargs.setdefault('auth', self.auth)
         kwargs.setdefault('rollback', self.rollback)
         kwargs.setdefault('content', self.content)
+        kwargs.setdefault('methods', self.methods)
         kwargs['sitemap'] = self.sitemap
         return self.__class__(func_name=func, **kwargs)
 
     def as_rule(self, url: str):
-        return Rule(string=url, endpoint=self)
+        return Rule(string=url, endpoint=self, methods=self.methods)
 
     def __call__(self, *args, **kwargs):
+        assert callable(self.func_name)
         if self.rollback:
             with request.env.cursor.with_savepoint():
                 response = self.func_name(*args, **kwargs)
@@ -186,7 +190,11 @@ def route(
     rollback: bool = True,
     sitemap: bool = True,
     content: Optional[str] = 'text/html',
+    methods: Optional[List[str]] = None,
 ):
+    if methods is not None and not isinstance(methods, Iterable):
+        methods = [methods]
+
     def _(func: Callable):
         if not func.__module__.startswith('master.addons.'):
             raise ValueError('Current function is not part of the master addons package')
@@ -200,6 +208,7 @@ def route(
                 rollback=rollback,
                 sitemap=sitemap,
                 content=content,
+                methods=methods and [v.upper() for v in methods if v and not v.isspace()] or None,
             )
         return func
     return _

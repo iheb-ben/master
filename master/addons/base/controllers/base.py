@@ -60,8 +60,9 @@ class Base(Controller):
                     func_name=endpoint.dispatch_url,
                     auth=endpoint.is_public,
                     content=endpoint.content_type,
+                    methods=endpoint.methods(),
+                    sitemap=endpoint.sitemap,
                     rollback=True,
-                    sitemap=True,
                 ).as_rule(url=endpoint.url))
         return current_list
 
