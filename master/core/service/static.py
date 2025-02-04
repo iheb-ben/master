@@ -2,6 +2,7 @@ from collections import defaultdict
 from pathlib import Path
 from typing import Optional, Any, Dict, List, Tuple, Callable
 from werkzeug.middleware.shared_data import SharedDataMiddleware
+from master.core.api import request
 from master.core.tools.files import TEMP_STATIC_FOLDER
 from master.core.tools.typing import SystemPath
 
@@ -55,8 +56,8 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         yield self._fetch(TEMP_STATIC_FOLDER, '_base')
 
     @classmethod
-    def get_full_path(cls, app: Any, path: str) -> Path:
-        for prefix, func in cls.APP_EXPORTS[app]:
+    def get_full_path(cls, path: str) -> Path:
+        for prefix, func in cls.APP_EXPORTS[request.application]:
             if path.startswith(prefix):
                 relative_path = path[len(prefix):].lstrip('/')
                 return Path(func(relative_path)[1]()[0].name)

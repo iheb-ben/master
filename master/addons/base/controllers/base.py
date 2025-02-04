@@ -1,6 +1,7 @@
+import json
 import traceback
 from collections import defaultdict
-from typing import Any, Dict, Tuple, Callable
+from typing import Any, Dict, Tuple, Callable, Union
 from werkzeug.exceptions import NotFound, HTTPException, ServiceUnavailable
 from werkzeug.routing import Map, Rule
 from master.core.api import request
@@ -9,33 +10,48 @@ from master.core.service.http import route, html_route, Controller, Response, En
 from master.core.service.static import StaticFilesMiddleware
 
 
+def _check_endpoint(*content_types: str):
+    data = request.rule or ''
+    if data:
+        data = data.endpoint.content or ''
+    return any(value in data for value in content_types)
+
+
 # noinspection PyMethodMayBeStatic
 class Base(Controller):
     def handle_error(self, error: Exception):
         request.error = error
-        if request.httprequest.method == 'GET':
-            status_code = 500
-            if isinstance(error, HTTPException) or hasattr(error, 'code'):
-                status_code = int(error.code)
+        status_code = 500
+        if isinstance(error, HTTPException) or hasattr(error, 'code'):
+            status_code = int(error.code)
+        if _check_endpoint('text/html', 'text/xhtml') and request.httprequest.accept_mimetypes.accept_html:
             if status_code == 503:
                 static_file_path = '/static/_/server_unavailable.html'
-                content = StaticFilesMiddleware.get_full_path(request.application, static_file_path).open()
+                content = StaticFilesMiddleware.get_full_path(static_file_path).open()
                 response = Response(content, status=status_code)
             else:
                 response = Response(template=f'base.page_{status_code}', status=status_code)
-            if request.rule:
-                response.content_type = request.rule.endpoint.content
+            response.content_type = request.rule.endpoint.content
             return response
+        elif _check_endpoint('application/json') and request.httprequest.accept_mimetypes.accept_json:
+            return Response(
+                response=json.dumps({
+                    'error': str(request.error),
+                    'traceback': request.error.traceback,
+                }),
+                status=status_code,
+                content_type=request.rule.endpoint.content,
+            )
         raise error
 
     def dispatch(self):
-        if request.error and not request.httprequest.path.startswith('/_/simulate/'):
-            raise request.error
-        adapter = Map(
-            rules=self.get_rules(),
-            converters=self.get_converters(),
-        ).bind_to_environ(environ=request.httprequest.environ)
         try:
+            if request.error and not request.httprequest.path.startswith('/_/simulate/'):
+                raise request.error
+            adapter = Map(
+                rules=self.get_rules(),
+                converters=self.get_converters(),
+            ).bind_to_environ(environ=request.httprequest.environ)
             details: Tuple[Rule, Dict[str, Any]] = adapter.match(return_rule=True)
             request.rule, kwargs = details
             if not request.rule.endpoint:

@@ -55,8 +55,8 @@ class Application:
                 return wrappers.Response(status=404)(werkzeug_environ, start_response)
             if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
-                if httprequest.method != 'GET':
-                    raise request.error
+                if httprequest.method != 'GET' or not httprequest.accept_mimetypes.accept_html:
+                    return wrappers.Response(status=request.error.code)(werkzeug_environ, start_response)
                 request.error.traceback = traceback.format_stack()
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
