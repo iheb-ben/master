@@ -1,7 +1,8 @@
 import atexit
+import traceback
 from threading import Event
 from werkzeug import wrappers
-from werkzeug.exceptions import ServiceUnavailable
+from werkzeug.exceptions import ServiceUnavailable, NotFound
 from werkzeug.serving import make_server, ThreadedWSGIServer
 from .http import Request, Controller, build_controller_class, build_converters_class
 from .static import StaticFilesMiddleware
@@ -28,9 +29,10 @@ class Application:
         with self.pool.get_cursor() as cursor:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
-        Controller.register_class(build_controller_class(self.installed))
-        if Controller.__object__ is not None:
-            Controller.__object__.__compiled_converters__ = build_converters_class(self.installed)
+        compiled = build_controller_class(self.installed)
+        Controller.compiled(compiled)
+        if compiled is not None:
+            compiled.__compiled_converters__ = build_converters_class(self.installed)
         self.reload_event.clear()
 
     def shutdown(self):
@@ -48,10 +50,13 @@ class Application:
         httprequest = wrappers.Request(werkzeug_environ)
         request = Request(httprequest, self)
         try:
+            if request.httprequest.path.startswith(f'/{StaticFilesMiddleware.PREFIX}/'):
+                raise NotFound()
             if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
                 if httprequest.method != 'GET':
                     raise request.error
+                request.error.traceback = traceback.format_stack()
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
             del request

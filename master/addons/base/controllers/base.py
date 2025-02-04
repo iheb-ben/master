@@ -31,7 +31,9 @@ class Base(Controller):
             request.rule, kwargs = details
             if not request.rule.endpoint:
                 raise NotFound()
-            return request.rule.endpoint(**kwargs)
+            response = request.rule.endpoint(**kwargs)
+            request.env.flush()
+            return response
         except Exception as error:
             error.traceback = traceback.format_exc()
             return self.handle_error(error)

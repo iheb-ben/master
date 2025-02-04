@@ -146,6 +146,7 @@ class Converter(Component, _BaseConverter):
 _compiled_controller: Optional[Type] = None
 
 
+# noinspection PyMethodParameters,PyPropertyDefinition
 class Controller(Component):
     __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(dict)
@@ -153,14 +154,8 @@ class Controller(Component):
     __compiled_converters__: Dict[str, Converter] = {}
 
     @staticmethod
-    def register_class(new_class):
-        globals()['_compiled_controller'] = new_class
-
-    # noinspection PyPropertyDefinition
-    @classmethod
-    @property
-    def __object__(cls):
-        return _compiled_controller
+    def compiled(cls):
+        globals()['_compiled_controller'] = cls
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
