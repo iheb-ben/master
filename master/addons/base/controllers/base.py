@@ -51,20 +51,16 @@ class Base(Controller):
         return self._compiled_converters
 
     def get_http_rules(self):
-        current_list = []
-        if request.httprequest.path.startswith('/_/simulate/'):
-            return current_list
-        if request.env.model_exists('ir.http'):
-            for endpoint in request.env['ir.http'].sudo().search([]):
-                current_list.append(Endpoint(
-                    func_name=endpoint.dispatch_url,
-                    auth=endpoint.is_public,
-                    content=endpoint.content_type,
-                    methods=endpoint.methods(),
-                    sitemap=endpoint.sitemap,
-                    rollback=True,
-                ).as_rule(url=endpoint.url))
-        return current_list
+        if 'ir.http' in request.env and not request.httprequest.path.startswith('/_/simulate/'):
+            return [Endpoint(
+                func_name=endpoint.dispatch_url,
+                auth=endpoint.is_public,
+                content=endpoint.content_type,
+                methods=endpoint.methods(),
+                sitemap=endpoint.sitemap,
+                rollback=True,
+            ).as_rule(url=endpoint.url) for endpoint in request.env['ir.http'].sudo().search([])]
+        return []
 
     def get_rules(self):
         return super().get_rules() + self.get_http_rules()
