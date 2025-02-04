@@ -39,7 +39,7 @@ class Request:
             Environment.push_request(new_request)
         return new_request
 
-    def __init__(self, httprequest: _Request, application: Callable):
+    def __init__(self, application: Callable, httprequest: _Request):
         self.httprequest = httprequest
         self.application = application
         self.env: Optional[Environment] = None
@@ -152,19 +152,11 @@ class Converter(Component, _BaseConverter):
                 Controller.__converters__[converter_name][current_addon].append(cls)
 
 
-_compiled_controller: Optional[Type] = None
-
-
 # noinspection PyMethodParameters,PyPropertyDefinition
 class Controller(Component):
     __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(dict)
     __converters__: Dict[str, Dict[str, List[Type]]] = defaultdict(dict)
-    __compiled_converters__: Dict[str, Converter] = {}
-
-    @staticmethod
-    def compiled(cls):
-        globals()['_compiled_controller'] = cls
 
     def __init_subclass__(cls, **kwargs):
         super().__init_subclass__(**kwargs)
@@ -175,10 +167,8 @@ class Controller(Component):
         if current_addon:
             cls.__children__[current_addon].append(cls)
 
-    def __new__(cls, *args, **kwargs):
-        if cls is Controller and _compiled_controller:
-            return _compiled_controller.__new__(_compiled_controller, *args, **kwargs)
-        return super().__new__(cls)
+    def __init__(self, converters, *args, **kwargs):
+        self._compiled_converters = converters
 
     def dispatch(self):
         raise NotImplemented()

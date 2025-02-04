@@ -12,7 +12,7 @@ from master.core.module import modules_paths, attach_order, select_addons
 
 
 class Application:
-    __slots__ = ('paths', 'pool', 'registry', 'installed', 'to_update')
+    __slots__ = ('_controller', 'paths', 'pool', 'registry', 'installed', 'to_update')
     reload_event = Event()
     stop_event = Event()
 
@@ -22,6 +22,7 @@ class Application:
         self.registry = {}
         self.installed = []
         self.to_update = []
+        self._controller = Controller(application=self, converters={})
         atexit.register(self.shutdown)
 
     def reload(self):
@@ -29,29 +30,26 @@ class Application:
         with self.pool.get_cursor() as cursor:
             self.installed, self.to_update = select_addons(cursor)
             attach_order(self.paths, self.installed)
-        compiled = build_controller_class(self.installed)
-        Controller.compiled(compiled)
-        if compiled is not None:
-            compiled.__compiled_converters__ = build_converters_class(self.installed)
+        compiled = build_controller_class(self.installed) or Controller
+        self._controller = compiled(application=self, converters=build_converters_class(self.installed))
         self.reload_event.clear()
 
     def shutdown(self):
         self.stop_event.set()
 
-    @staticmethod
-    def dispatch(request, werkzeug_environ, start_response):
+    def dispatch(self, request, werkzeug_environ, start_response):
         with request.create_environment() as erp_environ:
             request.env = erp_environ
-            closing_iterator = Controller().dispatch()(werkzeug_environ, start_response)
+            closing_iterator = self._controller.dispatch()(werkzeug_environ, start_response)
             erp_environ.flush()
         return closing_iterator
 
     def __call__(self, werkzeug_environ, start_response):
         httprequest = wrappers.Request(werkzeug_environ)
-        request = Request(httprequest, self)
+        request = Request(self, httprequest)
         try:
             if request.httprequest.path.startswith(f'/{StaticFilesMiddleware.PREFIX}/'):
-                raise NotFound()
+                return wrappers.Response(status=404)(werkzeug_environ, start_response)
             if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
                 if httprequest.method != 'GET':
