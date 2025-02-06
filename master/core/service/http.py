@@ -1,11 +1,9 @@
-import json
 from collections import defaultdict
 from contextlib import contextmanager
 from typing import Any, Type, Optional, List, Dict, Callable, Generator, Union, Iterable
 from werkzeug.routing import BaseConverter as _BaseConverter, Rule
 from werkzeug.wrappers import Request as _Request, Response as _Response
 from master.core.api import Environment, request, Component
-from master.core.database.cursor import Cursor
 from master.core.tools import filter_class, simplify_class_name
 
 HTTP_METHODS = ['GET', 'PUT', 'POST', 'DELETE', 'PATCH', 'HEAD', 'OPTIONS', 'TRACE']
@@ -90,27 +88,6 @@ class Endpoint:
     def as_rule(self, url: str):
         return Rule(string=url, endpoint=self, methods=self.methods)
 
-    def __call__(self, *args, **kwargs):
-        assert callable(self.func_name)
-        if self.rollback:
-            with request.env.cursor.with_savepoint():
-                response = self.func_name(*args, **kwargs)
-        else:
-            response = self.func_name(*args, **kwargs)
-        response = response or Response(status=200)
-        if isinstance(response, dict):
-            response = json.dumps(response)
-        if not isinstance(response, _Response):
-            status = 200
-            if isinstance(response, tuple):
-                response, status = response
-            if isinstance(response, dict):
-                response = json.dumps(response)
-            response = Response(response=response, status=status)
-        if self.content and response.content_type.startswith('text/plain'):
-            response.content_type = self.content
-        return response
-
     def __repr__(self):
         func_name = self.func_name
         if not isinstance(func_name, str):
@@ -162,7 +139,7 @@ class Converter(Component, _BaseConverter):
                 Controller.__converters__[converter_name][current_addon].append(cls)
 
 
-# noinspection PyMethodParameters,PyPropertyDefinition
+# noinspection PyMethodParameters,PyPropertyDefinition,PyMethodMayBeStatic
 class Controller(Component):
     __children__: Dict[str, List[Type]] = defaultdict(list)
     __endpoints__: Dict[str, Dict[str, Endpoint]] = defaultdict(dict)
@@ -180,26 +157,31 @@ class Controller(Component):
         self,
         application: Any = None,
         endpoints: Optional[Dict[str, Endpoint]] = None,
-        converters: Optional[Dict[str, Endpoint]] = None,
+        converters: Optional[Dict[str, Converter]] = None,
     ):
-        self._compiled_endpoints = endpoints or {}
-        self._compiled_converters = converters or {}
+        self._compiled_endpoints: Optional[Dict[str, Endpoint]] = endpoints or {}
+        self._compiled_converters: Optional[Dict[str, Converter]] = converters or {}
         if application is not None:
             for installed_module in reversed(application.installed):
                 for url, module_endpoint in Controller.__endpoints__.items():
                     if url in self._compiled_endpoints:
                         continue
                     for module, endpoint in module_endpoint.items():
-                        if module != installed_module or not hasattr(self, endpoint.func_name):
+                        if module != installed_module:
                             continue
-                        controller_method: Callable = getattr(self, endpoint.func_name)
-                        self._compiled_endpoints.setdefault(url, endpoint.wrap(func=controller_method))
+                        if isinstance(endpoint.func_name, str):
+                            if not hasattr(self, endpoint.func_name):
+                                continue
+                            attach_endpoint = endpoint.wrap(self.__getattribute__(endpoint.func_name))
+                        else:
+                            attach_endpoint = endpoint
+                        self._compiled_endpoints.setdefault(url, attach_endpoint)
                         break
 
     def get_rules(self):
         return [endpoint.as_rule(url=url) for url, endpoint in self._compiled_endpoints.items()]
 
-    def dispatch(self):
+    def __call__(self):
         raise NotImplemented()
 
 
@@ -208,7 +190,7 @@ def route(
     auth: bool = False,
     rollback: bool = True,
     sitemap: bool = True,
-    content: Optional[str] = 'text/html',
+    content: Optional[str] = None,
     methods: Optional[List[str]] = None,
 ):
     if methods is not None and not isinstance(methods, Iterable):
@@ -231,13 +213,3 @@ def route(
             )
         return func
     return _
-
-
-def json_route(*args, **kwargs):
-    kwargs['content'] = 'application/json'
-    return route(*args, **kwargs)
-
-
-def html_route(*args, **kwargs):
-    kwargs['content'] = 'text/html'
-    return route(*args, **kwargs)

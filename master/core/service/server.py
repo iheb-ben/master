@@ -43,7 +43,7 @@ class Application:
     def dispatch(self, request, werkzeug_environ, start_response):
         with request.create_environment() as erp_environ:
             request.env = erp_environ
-            closing_iterator = self._controller.dispatch()(werkzeug_environ, start_response)
+            closing_iterator = self._controller()(werkzeug_environ, start_response)
             erp_environ.flush()
         return closing_iterator
 
@@ -52,12 +52,12 @@ class Application:
         request = Request(self, httprequest)
         try:
             if request.httprequest.path.startswith(f'/{StaticFilesMiddleware.PREFIX}/'):
-                return wrappers.Response(status=404)(werkzeug_environ, start_response)
+                return wrappers.Response(status=NotFound().code)(werkzeug_environ, start_response)
             if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
                 if httprequest.method != 'GET' or not httprequest.accept_mimetypes.accept_html:
                     return wrappers.Response(status=request.error.code)(werkzeug_environ, start_response)
-                request.error.traceback = traceback.format_stack()
+                request.error.traceback = traceback.format_exception(request.error)
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
             del request

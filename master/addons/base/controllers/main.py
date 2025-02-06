@@ -1,9 +1,14 @@
-from master.core.service.http import html_route
+from master.core.exceptions import SimulateHTTPException
+from master.core.service.http import route
 from .base import Base
 
 
 # noinspection PyMethodMayBeStatic
 class Main(Base):
-    @html_route('/')
+    @route('/_/simulate/<int:code>', rollback=False, sitemap=False)
+    def _simulate_http_error(self, code):
+        raise SimulateHTTPException(code)
+
+    @route('/')
     def homepage(self):
         return 'Home Page'

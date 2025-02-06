@@ -61,6 +61,9 @@ class Environment:
     def is_sudo(self):
         return self._sudo
 
+    def clear(self):
+        self._store.clear()
+
     def flush(self):
         while self._store:
             self.cursor.execute(self._store.pop(0))
