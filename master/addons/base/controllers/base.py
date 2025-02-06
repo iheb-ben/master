@@ -107,23 +107,20 @@ class Base(Controller):
         accept_mimetypes, request_rule, status = request.httprequest.accept_mimetypes, request.rule, 200
         content_type: Optional[str] = request_rule and request_rule.endpoint.content or None
         response = response or Response(status=status, content_type=content_type)
-        if response:
-            if isinstance(response, _Response):
-                if 'text/plain' in response.content_type and content_type:
-                    response.content_type = content_type
-                return response
-            if isinstance(response, tuple):
-                response, current_status = response
-                status = current_status or status
-            if isinstance(response, dict):
-                response = json.dumps(response)
-                if not content_type and accept_mimetypes.accept_json:
-                    content_type = 'application/json'
-            if not content_type:
-                if isinstance(response, str) and accept_mimetypes.accept_html and _check_ect('text/html', 'text/xhtml'):
-                    content_type = 'text/html'
-                elif isinstance(response, str) and accept_mimetypes.accept_xml and _check_ect('application/xml'):
-                    content_type = 'application/xml'
-            if not isinstance(response, _Response):
-                response = Response(response=response, status=status, content_type=content_type)
-        return response
+        if isinstance(response, _Response):
+            if 'text/plain' in response.content_type and content_type:
+                response.content_type = content_type
+            return response
+        if isinstance(response, tuple):
+            response, current_status = response
+            status = current_status or status
+        if isinstance(response, dict):
+            response = json.dumps(response)
+            if not content_type and accept_mimetypes.accept_json:
+                content_type = 'application/json'
+        if not content_type:
+            if isinstance(response, str) and accept_mimetypes.accept_html and _check_ect('text/html', 'text/xhtml'):
+                content_type = 'text/html'
+            elif isinstance(response, str) and accept_mimetypes.accept_xml and _check_ect('application/xml'):
+                content_type = 'application/xml'
+        return Response(response=response, status=status, content_type=content_type)
