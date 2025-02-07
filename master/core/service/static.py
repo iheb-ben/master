@@ -60,5 +60,9 @@ class StaticFilesMiddleware(SharedDataMiddleware):
         for prefix, func in cls.APP_EXPORTS[request.application]:
             if path.startswith(prefix):
                 relative_path = path[len(prefix):].lstrip('/')
-                return Path(func(relative_path)[1]()[0].name)
+                # noinspection PyBroadException
+                try:
+                    return Path(func(relative_path)[1]()[0].name)
+                except Exception:
+                    continue
         raise FileNotFoundError()

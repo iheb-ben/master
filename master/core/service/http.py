@@ -13,8 +13,6 @@ class Response(_Response):
     def __init__(self, *args, **kwargs):
         self.template = kwargs.pop('template', None)
         self.context = kwargs.pop('context', {})
-        if self.template:
-            kwargs.setdefault('content_type', 'text/html')
         super().__init__(*args, **kwargs)
 
     def __call__(self, *args, **kwargs):
@@ -170,7 +168,7 @@ class Controller(Component):
                         if module != installed_module:
                             continue
                         if isinstance(endpoint.func_name, str):
-                            if not hasattr(self, endpoint.func_name):
+                            if not hasattr(self, endpoint.func_name) or endpoint.func_name.startswith('_'):
                                 continue
                             attach_endpoint = endpoint.wrap(self.__getattribute__(endpoint.func_name))
                         else:

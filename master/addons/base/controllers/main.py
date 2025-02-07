@@ -6,9 +6,9 @@ from .base import Base
 # noinspection PyMethodMayBeStatic
 class Main(Base):
     @route('/_/simulate/<int:code>', rollback=False, sitemap=False)
-    def _simulate_http_error(self, code):
+    def route_simulate_http_error(self, code):
         raise SimulateHTTPException(code)
 
     @route('/')
-    def homepage(self):
+    def route_homepage(self):
         return 'Home Page'
