@@ -48,20 +48,18 @@ class Application:
         return closing_iterator
 
     def __call__(self, werkzeug_environ, start_response):
-        httprequest = wrappers.Request(werkzeug_environ)
-        request = Request(self, httprequest)
+        request = Request(self, wrappers.Request(werkzeug_environ))
         try:
             if request.httprequest.path.startswith(f'/{StaticFilesMiddleware.PREFIX}/'):
                 return wrappers.Response(status=NotFound().code)(werkzeug_environ, start_response)
             if self.reload_event.is_set():
                 request.error = ServiceUnavailable()
-                if httprequest.method != 'GET' or not httprequest.accept_mimetypes.accept_html:
+                if request.httprequest.method != 'GET' or not request.httprequest.accept_mimetypes.accept_html:
                     return wrappers.Response(status=request.error.code)(werkzeug_environ, start_response)
                 request.error.traceback = traceback.format_exception(request.error)
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
             del request
-            del httprequest
 
 
 def start_server(pool: PoolManager):

@@ -1,6 +1,9 @@
+from io import BytesIO
+import magic
 import json
 import traceback
-from typing import Any
+from functools import wraps
+from typing import Any, Callable
 from werkzeug.exceptions import NotFound, HTTPException
 from werkzeug.routing import Map
 from werkzeug.wrappers import Response as _Response
@@ -15,8 +18,40 @@ def _check_ect(*content_types: str):
     return not data or any(value in data for value in content_types)
 
 
+def _content_type(file_obj):
+    mime = magic.Magic(mime=True)
+    first_bytes = file_obj.read(2048)
+    file_obj.seek(0)
+    return mime.from_buffer(first_bytes)
+
+
+def _render_response(func: Callable):
+    @wraps(func)
+    def _wrapper(self, *args, **kwargs):
+        response = func(self, *args, **kwargs)
+        if isinstance(response, Response) and response.template:
+            if content := self._render(self._init_response(response)):
+                return content
+        return response
+    return _wrapper
+
+
 # noinspection PyMethodMayBeStatic
 class Base(Controller):
+    def _init_response(self, response: Response):
+        for key, item in request.context.items():
+            response.context.setdefault(key, item)
+        response.context.setdefault('error', request.error)
+        response.context['request'] = request
+        return response
+
+    def _render(self, response: Response):
+        mode_name = 'ir.qweb'
+        if mode_name in request.env:
+            if qweb_id := request.env[mode_name].sudo().search([('xml_id', '=', response.template)], limit=1):
+                response.data = qweb_id.render(response.context)
+        return response
+
     def _handle_error_html_503(self):
         content = StaticFilesMiddleware.get_full_path('/static/_/server_unavailable.html').open()
         return Response(content, status=request.error.code, content_type='text/html')
@@ -108,6 +143,7 @@ class Base(Controller):
             error.traceback = traceback.format_exception(error)
             return self._handle_error(error)
 
+    @_render_response
     def __call__(self):
         response: Any = self._dispatch()
         accept_mimetypes, request_rule, status = request.httprequest.accept_mimetypes, request.rule, 200
@@ -120,7 +156,7 @@ class Base(Controller):
         if isinstance(response, tuple):
             response, current_status = response
             status = current_status or status
-        if isinstance(response, dict):
+        if isinstance(response, dict) or isinstance(response, list):
             response = json.dumps(response)
             if not content_type and accept_mimetypes.accept_json:
                 content_type = 'application/json'
@@ -129,4 +165,6 @@ class Base(Controller):
                 content_type = 'text/html'
             elif isinstance(response, str) and accept_mimetypes.accept_xml:
                 content_type = 'application/xml'
+            elif isinstance(response, BytesIO):
+                content_type = _content_type(response) or 'application/octet-stream'
         return Response(response=response, status=status, content_type=content_type)
