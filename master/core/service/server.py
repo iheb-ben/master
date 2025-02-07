@@ -43,7 +43,7 @@ class Application:
     def dispatch(self, request, werkzeug_environ, start_response):
         with request.create_environment() as erp_environ:
             request.env = erp_environ
-            closing_iterator = self._controller()(werkzeug_environ, start_response)
+            closing_iterator = self._controller.dispatch()(werkzeug_environ, start_response)
             erp_environ.flush()
         return closing_iterator
 

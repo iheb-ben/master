@@ -1,5 +1,5 @@
 from master.core.exceptions import SimulateHTTPException
-from master.core.service.http import route
+from master.core.service.http import route, Response
 from .base import Base
 
 
@@ -12,3 +12,7 @@ class Main(Base):
     @route('/')
     def route_homepage(self):
         return 'Home Page'
+
+    @route('/hello')
+    def route_hello_world(self):
+        return Response(template='base.hello_world')

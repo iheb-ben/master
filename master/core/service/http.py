@@ -174,7 +174,7 @@ class Controller(Component):
     def get_rules(self):
         return [endpoint.as_rule(url=url) for url, endpoint in self._compiled_endpoints.items()]
 
-    def __call__(self):
+    def dispatch(self):
         raise NotImplemented()
 
 
