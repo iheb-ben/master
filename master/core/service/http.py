@@ -163,7 +163,7 @@ class Controller(Component):
                         if module != installed_module:
                             continue
                         if isinstance(endpoint.func_name, str):
-                            if not hasattr(self, endpoint.func_name) or endpoint.func_name.startswith('_'):
+                            if not hasattr(self, endpoint.func_name):
                                 continue
                             attach_endpoint = endpoint.wrap(self.__getattribute__(endpoint.func_name))
                         else:
@@ -190,6 +190,8 @@ def route(
         methods = [methods]
 
     def _(func: Callable):
+        if func.__name__.startswith('_'):
+            raise ValueError('Routes cannot be a private method')
         if not func.__module__.startswith('master.addons.'):
             raise ValueError('Current function is not part of the master addons package')
         module = func.__module__.split('.')[2]

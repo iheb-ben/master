@@ -88,9 +88,15 @@ class Base(Controller):
     def _middleware_after_request(self, response: Any):
         return response
 
+    def _authorize(self):
+        pass
+
     def _middleware(self, *args, **kwargs):
         def _execute():
             try:
+                if request.rule.endpoint.auth:
+                    if response := self._authorize():
+                        return response
                 return request.rule.endpoint.func_name(*args, **kwargs)
             except Exception:
                 if request.rule.endpoint.rollback:
