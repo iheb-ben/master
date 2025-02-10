@@ -56,7 +56,7 @@ class Application:
                 request.error = ServiceUnavailable()
                 if request.httprequest.method != 'GET' or not request.httprequest.accept_mimetypes.accept_html:
                     return wrappers.Response(status=request.error.code)(werkzeug_environ, start_response)
-                request.error.traceback = traceback.format_exception(request.error)
+                request.error.traceback = []
             return self.dispatch(request, werkzeug_environ, start_response)
         finally:
             del request
