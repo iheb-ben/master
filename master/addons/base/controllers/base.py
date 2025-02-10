@@ -3,6 +3,7 @@ import magic
 import json
 import traceback
 from typing import Any
+from magic import Magic, MagicException
 from werkzeug.exceptions import NotFound, HTTPException
 from werkzeug.routing import Map
 from werkzeug.wrappers import Response as _Response
@@ -17,11 +18,11 @@ def _check_ect(*content_types: str):
     return not data or any(value in data for value in content_types)
 
 
-def _content_type(file_obj):
-    mime = magic.Magic(mime=True)
-    first_bytes = file_obj.read(2048)
-    file_obj.seek(0)
-    return mime.from_buffer(first_bytes)
+def _find_content_type(first_bytes):
+    try:
+        return Magic(mime=True).from_buffer(first_bytes)
+    except MagicException:
+        return None
 
 
 # noinspection PyMethodMayBeStatic
@@ -142,7 +143,7 @@ class Base(Controller):
         content_type: Optional[str] = request_rule and request_rule.endpoint.content or None
         response = response or Response(status=status, content_type=content_type)
         if isinstance(response, _Response):
-            if 'text/plain' in response.content_type and content_type:
+            if content_type:
                 response.content_type = content_type
             return response
         if isinstance(response, tuple):
@@ -158,7 +159,10 @@ class Base(Controller):
             elif isinstance(response, str) and accept_mimetypes.accept_xml:
                 content_type = 'application/xml'
             elif isinstance(response, BytesIO):
-                content_type = _content_type(response) or 'application/octet-stream'
+                content_type = _find_content_type(response.read(2048)) or 'application/octet-stream'
+                response.seek(0)
+            elif isinstance(response, bytes):
+                content_type = _find_content_type(response[:2048]) or 'application/octet-stream'
         return Response(response=response, status=status, content_type=content_type)
 
     def dispatch(self):
